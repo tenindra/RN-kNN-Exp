@@ -37,22 +37,22 @@ the directories, running experiments, and generating figures are found in the sc
 
 2. Create a directory called "build" in the top-level (i.e. knn/) directory
 
-```
-mkdir build
-```
+    ```
+    mkdir build
+    ```
 
 3. Change into this directory and Generate makefiles using CMake
 
-```
-cd build
-cmake -G "Unix Makefiles" ../CMakeLists.txt ..
-```
+    ```
+    cd build
+    cmake -G "Unix Makefiles" ../CMakeLists.txt ..
+    ```
 
 4. Compile all executables using make
 
-```
-make
-```
+    ```
+    make
+    ```
 
 
 # Setup
@@ -61,26 +61,26 @@ make
 
 2. Change the "output_path" variable to the full-path of an *existing* location where you wish to store all data (e.g. indexes, objects sets, figures, etc...)
 
-Note: This can be different to the path containing the code (recommended)
+    Note: This can be different to the path containing the code (recommended)
 
 3. Change the "exe_path" to the full path of the build directory created above
 
 4. Run `resetExperimentalSetup` in the scripts directory to create all necessary sub-directories
 
-```
-cd scripts
-bash resetExperimentalSetup
-```
+    ```
+    cd scripts
+    bash resetExperimentalSetup
+    ```
 
 5. Download the DIMACS distance edge-weight graph files (with extension .gr.gz and prefixed by USA-road-*d*) and coordinate files (with extension .co.gz) for DE, VT, ME and NW from https://github.com/tenindra/rn_knn_exp_data to the output_path/data/dimacs directory
 
 6. Download the DIMACS distance edge-weight graph files and coordinate files for COL, CAL, E, W, CTR, USA from http://www.dis.uniroma1.it/challenge9/ to the output_path/data/dimacs directory
 
-Note: You *must* rename the "CAL" in DIMACS graph and coordinate filenames to CALNV.
+    Note: You *must* rename the "CAL" in DIMACS graph and coordinate filenames to CALNV.
 
 7. Download the node (with extension .cnode) and edge (with extension .cedge) files for North America (NA) from http://www.cs.utah.edu/~lifeifei/SpatialDataset to the output_path/data/tpq directory
 
-Note: You *must* gzip each file so you have two files, NA.cnode.gz and NA.cedge.gz, in the output_path/data/tpq directory
+    Note: You *must* gzip these files so that output_path/data/tpq directory contains NA.cnode.gz and NA.cedge.gz
 
 8. Download the real_world_pois.tar.gz from https://github.com/tenindra/rn_knn_exp_data to the output_path/ directory
 
@@ -102,47 +102,47 @@ The follow instructions can be followed to re-create all figures from the paper.
 
 1. Clean the DIMACS and TPQ datasets for errors and redundancy
 
-```
-bash transformInputData
-```
+    ```
+    bash transformInputData
+    ```
 
 2. Build the binary files for the basic graph representations
 
-```
-bash buildBinaryGraphs
-```
+    ```
+    bash buildBinaryGraphs
+    ```
 
 3. Build all road network indexes (this may take a while - ~15 hours on our machine)
 
-```
-bash buildRoadNetworkIndexes
-```
+    ```
+    bash buildRoadNetworkIndexes
+    ```
 
 4. Generate query sets
 
-```
-bash generateQuerySets
-```
+    ```
+    bash generateQuerySets
+    ```
 
 5. Generate random object sets and build corresponding object indexes
 
-```
-bash buildObjectIndexes
-```
+    ```
+    bash buildObjectIndexes
+    ```
 
-Note: You can run `resetExperimentalSetup` again to remove all object indexes and query sets
+    Note: You can run `resetExperimentalSetup` again to remove all object indexes and query sets
 
 6. Run all paper experiments and produce figures
 
-```
-bash runPaperExperiments
-```
+    ```
+    bash runPaperExperiments
+    ```
 
-Note: The above command also creates figures, but if you wish to recreate figures without running experiments again (which can take sometime), you can use: 
+    Note: The above command also creates figures, but if you wish to recreate figures without running experiments again (which can take sometime), you can use: 
 
-```
-bash createPaperFigures
-```
+    ```
+    bash createPaperFigures
+    ```
 
 Note: All above commands may be batched, just enter each separated by semi-colon ";"
 
@@ -158,19 +158,19 @@ can also be re-produced using the following procedure:
 
 3. Change the "edge_type" variable to "t"
 
-Note: The "edge_type" variable must be changed back to "d" to run travel distance experiments
+    Note: The "edge_type" variable must be changed back to "d" to run travel distance experiments
 
 4. Run the `resetExperimentalSetup` to create all necessary sub-directories
 
-```
-bash resetExperimentalSetup
-```
+    ```
+    bash resetExperimentalSetup
+    ```
 
 5. Download the DIMACS travel time edge-weight graph files (with extension .gr.gz and prefixed by USA-road-*t*) and coordinate files (with extension .co.gz) for DE, VT, ME and NW from https://github.com/tenindra/rn_knn_exp_data to the output_path/data/dimacs directory
 
 6. Download the DIMACS travel time edge-weight graph files and coordinate files for COL, CAL, E, W, CTR, USA from http://www.dis.uniroma1.it/challenge9/ to the output_path/data/dimacs directory
 
-Note: You *must* rename the "CAL" in DIMACS graph and coordinate filenames to CALNV.
+    Note: You *must* rename the "CAL" in DIMACS graph and coordinate filenames to CALNV.
 
 7. Download the real_world_pois.tar.gz from https://github.com/tenindra/rn_knn_exp_data to the output_path/ directory
 
@@ -178,35 +178,35 @@ Note: You *must* rename the "CAL" in DIMACS graph and coordinate filenames to CA
 
 9. Clean the DIMACS datasets for errors and redundancy for travel time edge weights
 
-```
-bash transformInputData
-```
+    ```
+    bash transformInputData
+    ```
 
 10. Build the binary files for the basic graph representations for travel time edge weights
 
-```
-bash buildBinaryGraphs
-```
+    ```
+    bash buildBinaryGraphs
+    ```
 
 11. As in steps 3-5 in "Running Experiments", execute:
 
-```
-bash buildRoadNetworkIndexes
-bash generateQuerySets
-bash buildObjectIndexes
-```
+    ```
+    bash buildRoadNetworkIndexes
+    bash generateQuerySets
+    bash buildObjectIndexes
+    ```
 
 12. Run all travel time experiments and produce figures
 
-```
-bash runTravelTimeExperiments
-```
+    ```
+    bash runTravelTimeExperiments
+    ```
 
-Note: The above command also creates figures, but if you wish to recreate figures without running experiments again (which can take sometime), you can use:
+    Note: The above command also creates figures, but if you wish to recreate figures without running experiments again (which can take sometime), you can use:
 
-```
-bash createTravelTimeFigures
-```
+    ```
+    bash createTravelTimeFigures
+    ```
 
 
 # Licence
