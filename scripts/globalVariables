@@ -1,0 +1,171 @@
+#!/bin/bash
+
+# Default Directories, Files and State
+main_program="nd_knn"
+exe_path="/<project path>/build"
+# output_path="/<distance directory full path>"
+# edge_type="d"
+output_path="/<time directory full path>" # Travel Time Experiments
+edge_type="t" # Travel Time Experiments
+idx_dir="$output_path/indexes"
+stats_dir="$output_path/stats"
+obj_idx_dir="$output_path/obj_indexes"
+sets_dir="$output_path/query_sets"
+rw_poi_dir="$output_path/real_world_pois"
+data_dir="$output_path/data"
+fig_dir="$output_path/fig"
+fig_data_dir="$fig_dir/data"
+knn_stats_file="knn_query_stats.txt"
+idx_stats_file="index_stats.txt"
+obj_stats_file="obj_index_stats.txt"
+
+# Index Parameters per Road Network
+DE_index_parameters="gtree_fanout=4,gtree_maxleafsize=64,road_fanout=4,road_levels=7,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+VT_index_parameters="gtree_fanout=4,gtree_maxleafsize=128,road_fanout=4,road_levels=8,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+ME_index_parameters="gtree_fanout=4,gtree_maxleafsize=128,road_fanout=4,road_levels=8,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+COL_index_parameters="gtree_fanout=4,gtree_maxleafsize=128,road_fanout=4,road_levels=9,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+NW_index_parameters="gtree_fanout=4,gtree_maxleafsize=256,road_fanout=4,road_levels=9,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+CAL_index_parameters="gtree_fanout=4,gtree_maxleafsize=256,road_fanout=4,road_levels=10,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+E_index_parameters="gtree_fanout=4,gtree_maxleafsize=256,road_fanout=4,road_levels=10,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+W_index_parameters="gtree_fanout=4,gtree_maxleafsize=512,road_fanout=4,road_levels=11,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+CTR_index_parameters="gtree_fanout=4,gtree_maxleafsize=512,road_fanout=4,road_levels=11,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+USA_index_parameters="gtree_fanout=4,gtree_maxleafsize=512,road_fanout=4,road_levels=11,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+
+NA_index_parameters="gtree_fanout=4,gtree_maxleafsize=128,road_fanout=4,road_levels=8,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+PAR_index_parameters="gtree_fanout=4,gtree_maxleafsize=128,road_fanout=4,road_levels=9,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+EUR_index_parameters="gtree_fanout=4,gtree_maxleafsize=512,road_fanout=4,road_levels=11,silc_maxquadtreeleafsize=1000,tnr_gridsize=128,alt_numlandmarks=16,alt_landmarktype=random"
+
+# Object Index Parameters per Road Network
+DE_obj_index_parameters="silc_quadtree_maxleafsize=100,db_quadtree_maxleafsize=100,rtree_branchfactor=8"
+VT_obj_index_parameters="silc_quadtree_maxleafsize=500,db_quadtree_maxleafsize=500,rtree_branchfactor=8"
+ME_obj_index_parameters="silc_quadtree_maxleafsize=500,db_quadtree_maxleafsize=500,rtree_branchfactor=8"
+COL_obj_index_parameters="silc_quadtree_maxleafsize=500,db_quadtree_maxleafsize=500,rtree_branchfactor=8"
+NW_obj_index_parameters="silc_quadtree_maxleafsize=500,db_quadtree_maxleafsize=500,rtree_branchfactor=8"
+CAL_obj_index_parameters="rtree_branchfactor=8"
+E_obj_index_parameters="rtree_branchfactor=8"
+W_obj_index_parameters="rtree_branchfactor=8"
+CTR_obj_index_parameters="rtree_branchfactor=16"
+USA_obj_index_parameters="rtree_branchfactor=32"
+
+NA_obj_index_parameters="silc_quadtree_maxleafsize=500,db_quadtree_maxleafsize=500,rtree_branchfactor=8"
+PAR_obj_index_parameters="silc_quadtree_maxleafsize=500,db_quadtree_maxleafsize=500,rtree_branchfactor=8"
+EUR_obj_index_parameters="rtree_branchfactor=32"
+
+# kNN Methods per Road Network
+if [[ $edge_type == "d" ]]; then
+    DE_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=1,ier_phl=1"
+    VT_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=1,ier_phl=1"
+    ME_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=1,ier_phl=1"
+    COL_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=1,ier_phl=1"
+    NW_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=1,ier_phl=1"
+    CAL_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    E_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    W_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    CTR_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=0"
+    USA_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=0"
+elif [[ $edge_type == "t" ]]; then
+    DE_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    VT_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    ME_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    COL_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    NW_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    CAL_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    E_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    W_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    CTR_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+    USA_knn_methods="ine=1,gtree=1,road=1,ier=1,silc=0,dist_brws=0,ier_phl=1"
+fi
+
+# Default kNN Experimental Parameters
+default_k="10"
+default_density="0.001"
+default_density_string="0.00100"
+default_type="random"
+default_network="NW"
+default_parameters="$NW_index_parameters,$NW_obj_index_parameters"
+default_obj_idxs="obj_sets=1,occ_list=1,assoc_dir=1,quadtree=1,rtree=1"
+default_verification="verify=0"
+default_obj_parameters="$default_obj_idxs,$default_parameters"
+default_knn_parameters="$default_methods,$default_parameters,$default_verification"
+ignore_variable="1"
+
+# kNN Experimental Parameters
+road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+if [[ $edge_type == "d" ]]; then
+    index_parameters=("gtree=1,road=1,silc=1,phl=1,ch=0,tnr=0,alt=0,$DE_index_parameters"
+                      "gtree=1,road=1,silc=1,phl=1,ch=0,tnr=0,alt=0,$VT_index_parameters"
+                      "gtree=1,road=1,silc=1,phl=1,ch=0,tnr=0,alt=0,$ME_index_parameters"
+                      "gtree=1,road=1,silc=1,phl=1,ch=0,tnr=0,alt=0,$COL_index_parameters"
+                      "gtree=1,road=1,silc=1,phl=1,ch=1,tnr=1,alt=0,$NW_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=0,tnr=0,alt=0,$CAL_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=0,tnr=0,alt=0,$E_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=0,tnr=0,alt=0,$W_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=0,ch=0,tnr=0,alt=0,$CTR_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=0,ch=0,tnr=0,alt=0,$USA_index_parameters")
+    obj_parameters=("obj_sets=1,occ_list=1,assoc_dir=1,quadtree=1,rtree=1,$DE_index_parameters,$DE_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=1,rtree=1,$VT_index_parameters,$VT_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=1,rtree=1,$ME_index_parameters,$ME_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=1,rtree=1,$COL_index_parameters,$COL_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=1,rtree=1,$NW_index_parameters,$NW_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$CAL_index_parameters,$CAL_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$E_index_parameters,$E_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$W_index_parameters,$W_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$CTR_index_parameters,$CTR_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$USA_index_parameters,$USA_obj_index_parameters")
+    knn_parameters=("$DE_knn_methods,$DE_index_parameters,$DE_obj_index_parameters,$default_verification"
+                    "$VT_knn_methods,$VT_index_parameters,$VT_obj_index_parameters,$default_verification"
+                    "$ME_knn_methods,$ME_index_parameters,$ME_obj_index_parameters,$default_verification"
+                    "$COL_knn_methods,$COL_index_parameters,$COL_obj_index_parameters,$default_verification"
+                    "$NW_knn_methods,$NW_index_parameters,$NW_obj_index_parameters,$default_verification"
+                    "$CAL_knn_methods,$CAL_index_parameters,$CAL_obj_index_parameters,$default_verification"
+                    "$E_knn_methods,$E_index_parameters,$E_obj_index_parameters,$default_verification"
+                    "$W_knn_methods,$W_index_parameters,$W_obj_index_parameters,$default_verification"
+                    "$CTR_knn_methods,$CTR_index_parameters,$CTR_obj_index_parameters,$default_verification"
+                    "$USA_knn_methods,$USA_index_parameters,$USA_obj_index_parameters,$default_verification")
+elif [[ $edge_type == "t" ]]; then
+    index_parameters=("gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$DE_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$VT_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$ME_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$COL_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$NW_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$CAL_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$E_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$W_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$CTR_index_parameters"
+                      "gtree=1,road=1,silc=0,phl=1,ch=1,tnr=1,alt=0,$USA_index_parameters")
+    obj_parameters=("obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$DE_index_parameters,$DE_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$VT_index_parameters,$VT_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$ME_index_parameters,$ME_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$COL_index_parameters,$COL_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$NW_index_parameters,$NW_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$CAL_index_parameters,$CAL_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$E_index_parameters,$E_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$W_index_parameters,$W_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$CTR_index_parameters,$CTR_obj_index_parameters"
+                    "obj_sets=1,occ_list=1,assoc_dir=1,quadtree=0,rtree=1,$USA_index_parameters,$USA_obj_index_parameters")
+    knn_parameters=("$DE_knn_methods,$DE_index_parameters,$DE_obj_index_parameters,$default_verification"
+                    "$VT_knn_methods,$VT_index_parameters,$VT_obj_index_parameters,$default_verification"
+                    "$ME_knn_methods,$ME_index_parameters,$ME_obj_index_parameters,$default_verification"
+                    "$COL_knn_methods,$COL_index_parameters,$COL_obj_index_parameters,$default_verification"
+                    "$NW_knn_methods,$NW_index_parameters,$NW_obj_index_parameters,$default_verification"
+                    "$CAL_knn_methods,$CAL_index_parameters,$CAL_obj_index_parameters,$default_verification"
+                    "$E_knn_methods,$E_index_parameters,$E_obj_index_parameters,$default_verification"
+                    "$W_knn_methods,$W_index_parameters,$W_obj_index_parameters,$default_verification"
+                    "$CTR_knn_methods,$CTR_index_parameters,$CTR_obj_index_parameters,$default_verification"
+                    "$USA_knn_methods,$USA_index_parameters,$USA_obj_index_parameters,$default_verification")
+else
+    echo "Unrecognised edge type! Must be \"d\" or \"t\""
+    exit 1
+fi
+
+# Note: Each parameter arrays element correspond to same index element in road_network index
+num_sets="50"
+num_points="200"
+densities="1,0.1,0.01,0.001,0.0001"
+types="random"
+k_values="1,5,10,25,50"
+
+# Arrays of Above for Plotting
+densities_arr=("1.00000" "0.10000" "0.01000" "0.00100" "0.00010")
+types_arr=("random")
+k_values_arr=("1" "5" "10" "25" "50")

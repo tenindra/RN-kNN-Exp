@@ -1,0 +1,92 @@
+#!/bin/bash
+
+. globalVariables
+
+type="min_nd"
+
+# $1 type: default (min_nd), min_nd or minmax_nd
+# $2 default_density (must support number of buckets - can't be too high)
+# $3 comma-separated buckets incrementing one-by-one starting from 1, e.g. 1,2,3,4,...
+# $4 default_bucket
+# $5 road_network: default or some other road network
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    type=$1
+fi
+
+if [[ $type != "min_nd" && $type != "minmax_nd" ]]; then
+    echo "Invalid type, must be min_nd or minmax_nd!";
+    exit 1
+fi
+
+default_density=$2
+buckets=$3
+IFS=',' read -a buckets_arr <<< "$4"
+default_bucket=$4
+
+if [[ $default_density == "" || $default_bucket == "" || $buckets == ""  ]]; then
+    echo "Invalid input parameters must specific default density, default bucket and buckets!"
+    exit 1
+fi
+
+if [[ $5 != "" && $5 != "none" ]]; then
+    default_network=$5
+    index_parameters="${5}_index_parameters"
+    obj_index_parameters="${5}_obj_index_parameters"
+    knn_methods="${5}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+else
+    index_parameters="${default_network}_index_parameters"
+    obj_index_parameters="${default_network}_obj_index_parameters"
+    knn_methods="${default_network}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+fi
+
+file_prefix="${type}_dist_set"
+dist_obj_stats_file="${file_prefix}_obj_index_stats.txt"
+dist_knn_varying_bucket_stats_file="${file_prefix}_knn_query_${default_network}_density_${default_density}_k_${default_k}_varying_bucket_stats.txt"
+dist_knn_varying_network_stats_file="${file_prefix}_knn_query_varying_network_stats.txt"
+
+> $stats_dir/$dist_obj_stats_file # Truncate file
+> $stats_dir/$dist_knn_varying_bucket_stats_file # Truncate file
+> $stats_dir/$dist_knn_varying_network_stats_file # Truncate file
+
+pts_filename="$(printf "%03d" $num_points)"
+pts_filename="${file_prefix}_$pts_filename"
+
+# Varying Buckets for Default Network
+
+# Create object sets and indexes for querying
+echo -e "\nBuilding object indexes for ${default_network} with varying $type" 
+args="-c exp -e objects -g $idx_dir/${default_network}.bin -n $num_sets -d $default_density -v $buckets -q $sets_dir/${default_network}_$pts_filename.txt -l $num_points -t $type -p $default_obj_parameters -f $output_path -s $stats_dir/$dist_obj_stats_file"
+${exe_path}/nd_knn $args
+
+# Run kNN queries for on default parameters with varying density
+echo -e "\nExperiment 1: Varying bucket with default parameters"
+args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $default_k -n $num_sets -d $default_density -v $buckets -t $type -p $default_knn_parameters -f $output_path -s $stats_dir/$dist_knn_varying_bucket_stats_file"
+${exe_path}/nd_knn $args
+
+# # Varying Network
+# 
+# if [[ $type == "minmax_nd" ]]; then
+# 
+#     echo -e "\nBuilding object indexes for all road networks with varying $type"
+#     for i in "${!road_networks[@]}"; do 
+#         args="-c exp -e objects -g $idx_dir/${road_networks[$i]}.bin -n $num_sets -d $default_density -v $buckets -q $sets_dir/${road_networks[$i]}_$pts_filename.txt -l $num_points -t $type -p ${obj_parameters[$i]} -f $output_path -s $stats_dir/$dist_obj_stats_file"
+#         ${exe_path}/nd_knn $args
+#     done
+# 
+#     # Run kNN queries for on default parameters with varying road network
+#     echo -e "\nExperiment 2: Varying network with default bucket"
+#     for i in "${!road_networks[@]}"; do 
+#         echo -e "\nRun kNN queries for ${road_networks[$i]}..."
+#         args="-c exp -e knn -g $idx_dir/${road_networks[$i]}.bin -q $sets_dir/${road_networks[$i]}_$pts_filename.txt -k $default_k -n $num_sets -d $default_density -v $default_bucket -t $type -p ${knn_parameters[$i]} -f $output_path -s $stats_dir/$dist_knn_varying_network_stats_file"
+#         ${exe_path}/nd_knn $args
+#     done
+# fi
+
+bash createMinMaxDistObjectsExperimentsFigures $1 $2 $3 $4 $5

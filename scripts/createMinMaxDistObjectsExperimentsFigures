@@ -1,0 +1,100 @@
+#!/bin/bash
+
+. globalVariables
+
+type="min_nd"
+
+# $1 type: default (min_nd), min_nd or minmax_nd
+# $2 default_density (must support number of buckets - can't be too high)
+# $3 comma-separated buckets incrementing one-by-one starting from 1, e.g. 1,2,3,4,...
+# $4 default_bucket
+# $5 road_network: default or some other road network
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    type=$1
+fi
+
+if [[ $type != "min_nd" && $type != "minmax_nd" ]]; then
+    echo "Invalid type, must be min_nd or minmax_nd!";
+    exit 1
+fi
+
+default_density=$2
+buckets=$3
+IFS=',' read -a buckets_arr <<< "$4"
+default_bucket=$4
+
+if [[ $default_density == "" || $default_bucket == "" || $buckets == ""  ]]; then
+    echo "Invalid input parameters must specific default density, default bucket and buckets!"
+    exit 1
+fi
+
+if [[ $5 != "" && $5 != "none" ]]; then
+    default_network=$5
+    index_parameters="${5}_index_parameters"
+    obj_index_parameters="${5}_obj_index_parameters"
+    knn_methods="${5}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+else
+    index_parameters="${default_network}_index_parameters"
+    obj_index_parameters="${default_network}_obj_index_parameters"
+    knn_methods="${default_network}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+fi
+
+file_prefix="${type}_dist_set"
+dist_obj_stats_file="${file_prefix}_obj_index_stats.txt"
+dist_knn_varying_bucket_stats_file="${file_prefix}_knn_query_${default_network}_density_${default_density}_k_${default_k}_varying_bucket_stats.txt"
+dist_knn_varying_network_stats_file="${file_prefix}_knn_query_varying_network_stats.txt"
+
+# Create figures from kNN results for varying buckets
+temp_file="temp_${file_prefix}_${default_network}_varying_buckets_k_${default_k}_density_${default_density}_${type}.txt"
+output_file="${file_prefix}_${default_network}_varying_buckets_k_${default_k}_density_${default_density}_${type}.txt"
+figure_file="${file_prefix}_${default_network}_varying_buckets_k_${default_k}_density_${default_density}_${type}"
+echo $x_tics
+if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+    if [[ $edge_type != "t" ]]; then
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+    else
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+    fi
+elif [[ $edge_type != "t" && $default_network == "USA" ]]; then
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12"
+else
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+fi
+if [[ $type == "min_nd" ]]; then
+#     cat $stats_dir/$dist_knn_varying_bucket_stats_file | awk -F $'\t' 'BEGIN {OFS = FS} { $10 = "Q"$10; print }' > $fig_data_dir/$temp_file # Change bucket numbers to query sets e.g. Q1
+    cat $stats_dir/$dist_knn_varying_bucket_stats_file | awk -F $'\t' 'BEGIN {OFS = FS} { $10 = "R"$10; print }' > $fig_data_dir/$temp_file # Change bucket numbers to query sets e.g. R1
+elif [[ $type == "minmax_nd" ]]; then
+    cat $stats_dir/$dist_knn_varying_bucket_stats_file | awk -F $'\t' 'BEGIN {OFS = FS} { $10 = "R"$10; print }' > $fig_data_dir/$temp_file # Change bucket numbers to query sets e.g. R1
+fi
+cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+rm $fig_data_dir/$temp_file
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Query Set,usecol,10,'',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "left top,horizontal maxcols 2,-2"
+
+# # Varying Network
+# 
+# if [[ $type == "minmax_nd" ]]; then
+# 
+#     # Create figures from kNN results for varying networks
+#     # We need to sort filtered file so that methods are together (rather than road networks) in original order
+#     temp_file="temp_${file_prefix}_varying_network_density_${default_density}_k_${default_k}.txt"
+#     output_file="${file_prefix}_varying_network_density_${default_density}_k_${default_k}.txt"
+#     sed -e 's/\tine\t/\t1_ine\t/' -e 's/\troad\t/\t2_road\t/' -e 's/\tgtree\t/\t3_gtree\t/' -e 's/\tier_gtree\t/\t4_ier_gtree\t/' -e 's/\tier_phl\t/\t5_ier_phl\t/' -e 's/\tdist_brws\t/\t6_dist_brws\t/' -e 's/\tdb_rtree\t/\t7_db_rtree\t/' < $stats_dir/$dist_knn_varying_network_stats_file > $fig_data_dir/$temp_file
+#     sort -t $'\t' -k 5,5 -s $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+#     sed -e 's/\t1_ine\t/\tine\t/' -e 's/\t2_road\t/\troad\t/' -e 's/\t3_gtree\t/\tgtree\t/' -e 's/\t4_ier_gtree\t/\tier_gtree\t/' -e 's/\t5_ier_phl\t/\tier_phl\t/' -e 's/\t6_dist_brws\t/\tdist_brws\t/' -e 's/\t7_db_rtree\t/\tdb_rtree\t/' < $fig_data_dir/$output_file > $fig_data_dir/$temp_file
+#     cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+#     rm $fig_data_dir/$temp_file
+#     plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,SILC;brown;4,DisBrw;cyan;2"
+#     figure_file="${file_prefix}_varying_network_density_${default_density}_k_${default_k}"
+#     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Road Network,usecol,1,'',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal,-2"
+#     figure_file="${file_prefix}_varying_total_nodes_density_${default_density}_k_${default_k}"
+#     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "2,Number of Vertices,none,'',logscale,'10^%T'" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal,-2"
+#     figure_file="${file_prefix}_varying_total_edges_density_${default_density}_k_${default_k}"
+#     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "3,Number of Edges,none,'',logscale,'10^%T'" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal,-2"
+# fi

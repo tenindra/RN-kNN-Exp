@@ -1,0 +1,132 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 default_density (must agree with cluster sizes)
+# $2 comma-separated densities in increasing order
+# $3 default_cluster_size (must agree with densities)
+# $4 comma-separated cluster sizes in increasing order
+# $5 road_network: default or some other road network
+
+type="partition"
+default_density="0.001"
+densities="0.1,0.01,0.001,0.0001"
+default_cluster_size="5"
+cluster_sizes="5,10,25,50,100"
+clusters="1,10,100,1000"
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    default_density=$1
+fi
+
+if [[ $2 != "" && $2 != "default" ]]; then
+    densities=$2
+fi
+
+if [[ $3 != "" && $3 != "default" ]]; then
+    default_cluster_size=$3
+fi
+
+if [[ $4 != "" && $4 != "default" ]]; then
+    cluster_sizes=$4
+fi
+
+IFS=',' read -a cluster_sizes_arr <<< "$cluster_sizes"
+
+if [[ $default_density == "" || $densities == "" || $default_cluster_size == "" || $cluster_sizes == "" ]]; then
+    echo "Invalid input parameters must specific default density, default cluster size, densities and cluster sizes!"
+    exit 1
+fi
+
+if [[ $5 != "" && $5 != "none" ]]; then
+    default_network=$5
+    index_parameters="${5}_index_parameters"
+    obj_index_parameters="${5}_obj_index_parameters"
+    knn_methods="${5}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+else
+    index_parameters="${default_network}_index_parameters"
+    obj_index_parameters="${default_network}_obj_index_parameters"
+    knn_methods="${default_network}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+fi
+
+
+file_prefix="clustered_sets"
+partition_obj_stats_file="${file_prefix}_obj_index_stats.txt"
+partition_knn_varying_k_stats_file="${file_prefix}_knn_query_varying_k_stats.txt"
+partition_knn_varying_density_stats_file="${file_prefix}_${default_network}_k_${default_k}_clustersize_${default_cluster_size}_size_knn_query_varying_density_stats.txt"
+partition_knn_varying_network_stats_file="${file_prefix}_knn_query_density_${default_density}_k_${default_k}_clustersize_${default_cluster_size}_varying_network_stats.txt"
+partition_knn_varying_clustersizes_stats_file="${file_prefix}_${default_network}_knn_query_density_${default_density}_k_${default_k}_varying_clustersizes_stats.txt"
+partition_knn_varying_clusters_stats_file="${file_prefix}_${default_network}_knn_query_k_${default_k}_clustersize_${default_cluster_size}_varying_clusters_stats.txt"
+
+> $stats_dir/$partition_knn_varying_k_stats_file # Truncate file
+> $stats_dir/$partition_knn_varying_density_stats_file # Truncate file
+> $stats_dir/$partition_knn_varying_network_stats_file # Truncate file
+> $stats_dir/$partition_knn_varying_clustersizes_stats_file # Truncate file
+> $stats_dir/$partition_knn_varying_clusters_stats_file # Truncate file
+> $stats_dir/$partition_obj_stats_file # Truncate file
+
+
+# Create object sets and indexes for querying
+echo -e "\nBuilding object indexes for ${default_network} with varying densities..." 
+args="-c exp -e objects -g $idx_dir/${default_network}.bin -n $num_sets -d $densities -v $default_cluster_size -t $type -p $default_obj_parameters -f $output_path -s $stats_dir/$partition_obj_stats_file"
+${exe_path}/nd_knn $args
+
+# Run kNN queries for on default parameters with varying k
+echo -e "\nExperiment 1: Varying k with default parameters (incl. cluster size)"
+pts_filename="$(printf "%03d" $num_points)"
+args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $k_values -n $num_sets -d $default_density -v $default_cluster_size -t $type -p $default_knn_parameters -f $output_path -s $stats_dir/$partition_knn_varying_k_stats_file"
+${exe_path}/nd_knn $args
+
+# # Run kNN queries for on default parameters with varying density
+# echo -e "\nExperiment 2: Varying density with default parameters (incl. cluster size)"
+# pts_filename="$(printf "%03d" $num_points)"
+# args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $default_k -n $num_sets -d $densities -v $default_cluster_size -t $type -p $default_knn_parameters -f $output_path -s $stats_dir/$partition_knn_varying_density_stats_file"
+# ${exe_path}/nd_knn $args
+
+# # Run kNN queries for on default parameters with varying road network
+# if [[ $default_density == "0.001" ]]; then
+#     echo -e "\nBuilding object indexes for varying road networks with default density and cluster size..."
+#     for i in "${!road_networks[@]}"; do 
+#         args="-c exp -e objects -g $idx_dir/${road_networks[$i]}.bin -n $num_sets -d $default_density -v $default_cluster_size -t $type -p ${obj_parameters[$i]} -f $output_path -s $stats_dir/$partition_obj_stats_file"
+#         ${exe_path}/nd_knn $args
+#     done
+# fi 
+# 
+# if [[ $default_density == "0.001" ]]; then
+#     echo -e "\nExperiment 3: Varying network with default parameters (incl. cluster size)"
+#     for i in "${!road_networks[@]}"; do 
+#         echo -e "\nRun kNN queries for ${road_networks[$i]}..."
+#         pts_filename="$(printf "%03d" $num_points)"
+#         args="-c exp -e knn -g $idx_dir/${road_networks[$i]}.bin -q $sets_dir/${road_networks[$i]}_$pts_filename.txt -k $default_k -n $num_sets -d $default_density -v $default_cluster_size -t $type -p ${knn_parameters[$i]} -f $output_path -s $stats_dir/$partition_knn_varying_network_stats_file"
+#         ${exe_path}/nd_knn $args
+#     done
+# fi 
+
+# # Run kNN queries for on default parameters with varying cluster sizes
+# echo -e "\nBuilding object indexes for ${default_network} with varying cluster sizes..." 
+# args="-c exp -e objects -g $idx_dir/${default_network}.bin -n $num_sets -d $default_density -v $cluster_sizes -t $type -p $default_obj_parameters -f $output_path -s $stats_dir/$partition_obj_stats_file"
+# ${exe_path}/nd_knn $args
+# 
+# echo -e "\nExperiment 4: Varying cluster sizes with default parameters"
+# pts_filename="$(printf "%03d" $num_points)"
+# args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $default_k -n $num_sets -d $default_density -v $cluster_sizes -t $type -p $default_knn_parameters -f $output_path -s $stats_dir/$partition_knn_varying_clustersizes_stats_file"
+# ${exe_path}/nd_knn $args
+
+# Run kNN queries for on default parameters with varying number clusters (similar to density effect)
+echo -e "\nBuilding object indexes for ${default_network} with varying number of clusters..." 
+args="-c exp -e objects -g $idx_dir/${default_network}.bin -n $num_sets -d $clusters -v $default_cluster_size -t $type -p $default_obj_parameters -f $output_path -s $stats_dir/$partition_obj_stats_file"
+${exe_path}/nd_knn $args
+
+echo -e "\nExperiment 5: Varying the actual number of clusters with default parameters (incl. cluster size)"
+pts_filename="$(printf "%03d" $num_points)"
+args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $default_k -n $num_sets -d $clusters -v $default_cluster_size -t $type -p $default_knn_parameters -f $output_path -s $stats_dir/$partition_knn_varying_clusters_stats_file"
+${exe_path}/nd_knn $args
+
+# Generate all clustered object set figures
+bash createClusteredObjectsExperimentsFigures $1 $2 $3 $4 $5

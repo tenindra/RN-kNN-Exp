@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# $1 source column for plot lines (should already be in correct order for grouping based on this column, note that column indexes start from 1)
+# $2 is the input stats file
+# $3 output file prefix 
+# $4 names for each data set in input file (comma separated)
+# $5 Optional road network tested ("all" to vary network or "default" to ignore)
+# $6 Optional custom y-axis string to passed to generateFigure ("default" to ignore)
+# $7 Optional custom key string generateFigure ("default" to ignore)
+# $8 Optional single non-default k to be tested (or "default" to ignore)
+# $9 Optional single non-default density to be tested (or "default" to ignore) THIS MUST PADDED VERSION (TO 5 DECIMAL PLACES)
+
+# E.g. usage: bash createSingleKnnExperimentFigures 13 test.txt silc_range_cutting "Brute Force,Start/End Cut,Recursive Cut"
+
+. globalVariables
+
+# Column 1: Network
+# Column 2: Num Nodes
+# Column 3: Num Edges
+# Column 4: Index Parameters
+# Column 5: Method
+# Column 6: k
+# Column 7: Query Time
+# Column 8: Object Set Type
+# Column 9: Object Set Density
+# Column 10: Object Set Variable
+# Column 11: Object Set Size
+# Column 12: Total Number of Queries
+# Column 13+: Special Fields
+
+# We overwrite global variables here to re-run specific cases
+# Note: road_networks should match what runSpecialKnnExperiments produces
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# densities_arr=("1.00000" "0.10000" "0.01000" "0.00100" "0.00010")
+# types_arr=("random" "uniform")
+# k_values_arr=("1" "5" "10" "25" "50")
+
+if [[ $5 != "" && $5 != "default" ]]; then
+    if [[ $5 != "all" ]]; then
+        road_networks=($5)
+    fi
+else
+    road_networks=($default_network)
+fi
+
+if [[ $6 != "" && $6 != "default" ]]; then
+    figure_y_axis_arg=$6
+else
+    figure_y_axis_arg="7,Query Time ({/Symbol m}s),logscale,'10^%T'"
+fi
+
+if [[ $7 != "" && $7 != "default" ]]; then
+    figure_key_arg=$7
+else
+    figure_key_arg="right bottom,vertical,-2"
+fi
+
+if [[ $8 != "" && $8 != "default" ]]; then
+    k_values_arr=($8)
+fi
+
+if [[ $9 != "" && $9 != "default" ]]; then
+    densities_arr=($9)
+fi
+
+if [[ $8 == "" || $8 == "default" ]]; then
+    # Vary K (if more than one k provided)
+    x_tics=$(IFS=':'; echo "${k_values_arr[*]}") # Join array delimited by comma
+    for i in "${!road_networks[@]}"; do 
+        for j in "${!densities_arr[@]}"; do 
+            for k in "${!types_arr[@]}"; do 
+                temp_file="temp_$3_${road_networks[$i]}_varying_k_density_${densities_arr[$j]}_${types_arr[$k]}.txt"
+                output_file="$3_${road_networks[$i]}_varying_k_density_${densities_arr[$j]}_${types_arr[$k]}.txt"
+                figure_file="$3_${road_networks[$i]}_varying_k_density_${densities_arr[$j]}_${types_arr[$k]}"
+                cat $stats_dir/$2 | bash filterStatsRows 1 ${road_networks[$i]} | bash filterStatsRows 8 ${types_arr[$k]} | bash filterStatsRows 9 ${densities_arr[$j]} > $fig_data_dir/$temp_file
+                cat $fig_data_dir/$temp_file | bash splitStatsRows $1 > $fig_data_dir/$output_file # Insert two newlines between methods
+                rm $fig_data_dir/$temp_file
+                bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "6,k,$x_tics,'','',''" "$figure_y_axis_arg" "$4" "$figure_key_arg"
+            done
+        done
+    done
+fi
+
+if [[ $9 == "" || $9 == "default" ]]; then
+    # Vary Density (if more than one density provided)
+    x_tics=$(IFS=':'; echo "${densities_arr[*]}")  # Join array delimited by comma
+    for i in "${!road_networks[@]}"; do 
+        for j in "${!k_values_arr[@]}"; do 
+            for k in "${!types_arr[@]}"; do 
+                temp_file="temp_$3_${road_networks[$i]}_varying_density_k_${k_values_arr[$j]}_${types_arr[$k]}.txt"
+                output_file="$3_${road_networks[$i]}_varying_density_k_${k_values_arr[$j]}_${types_arr[$k]}.txt"
+                figure_file="$3_${road_networks[$i]}_varying_density_k_${k_values_arr[$j]}_${types_arr[$k]}"
+                cat $stats_dir/$2 | bash filterStatsRows 1 ${road_networks[$i]} | bash filterStatsRows 8 ${types_arr[$k]} | bash filterStatsRows 6 ${k_values_arr[$j]} > $fig_data_dir/$temp_file
+                cat $fig_data_dir/$temp_file | bash splitStatsRows $1 > $fig_data_dir/$output_file # Insert two newlines between methods
+                rm $fig_data_dir/$temp_file
+                bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Density,$x_tics,'',logscale,''" "$figure_y_axis_arg" "$4" "$figure_key_arg"
+            done
+        done
+    done    
+fi
+
+if [[ $5 == "all" ]]; then
+    # Vary Road Network
+    for i in "${!densities_arr[@]}"; do 
+        for j in "${!k_values_arr[@]}"; do 
+            for k in "${!types_arr[@]}"; do 
+                temp_file="temp_$3_varying_network_density_${densities_arr[$i]}_k_${k_values_arr[$j]}_${types_arr[$k]}.txt"
+                output_file="$3_varying_network_density_${densities_arr[$i]}_k_${k_values_arr[$j]}_${types_arr[$k]}.txt"
+                cat $stats_dir/$2 | bash filterStatsRows 8 ${types_arr[$k]} | bash filterStatsRows 9 ${densities_arr[$i]} | bash filterStatsRows 6 ${k_values_arr[$j]} > $fig_data_dir/$temp_file
+                # We need to sort filtered file so that methods are together (rather than road networks) in original order
+                cat $fig_data_dir/$temp_file | bash splitStatsRows $1 > $fig_data_dir/$output_file # Insert two newlines between methods
+                rm $fig_data_dir/$temp_file
+                #figure_file="$3_varying_network_density_${densities_arr[$i]}_k_${k_values_arr[$j]}_${types_arr[$k]}"
+                #bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Road Network,usecol,1,'',''" "$figure_y_axis_arg" "$4" "$figure_key_arg"
+                figure_file="$3_varying_total_nodes_density_${densities_arr[$i]}_k_${k_values_arr[$j]}_${types_arr[$k]}"
+                bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "2,Number of Vertices,none,'',logscale,'10^%T'" "$figure_y_axis_arg" "$4" "$figure_key_arg"
+                #figure_file="$3_varying_total_edges_density_${densities_arr[$i]}_k_${k_values_arr[$j]}_${types_arr[$k]}"
+                #bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "3,Number of Edges,none,'',logscale,'10^%T'" "$figure_y_axis_arg" "$4" "$figure_key_arg"
+            done
+        done
+    done
+fi

@@ -1,0 +1,100 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 new default k, $2 new default density, $3 new default network, $4 don't run something
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    default_k=$1
+fi
+
+if [[ $2 != "" && $2 != "default" ]]; then
+    default_density=$2
+fi
+
+if [[ $3 != "" ]]; then
+    default_network=$3
+    index_parameters="${3}_index_parameters"
+    obj_index_parameters="${3}_obj_index_parameters"
+    knn_methods="${3}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+else
+    index_parameters="${default_network}_index_parameters"
+    obj_index_parameters="${default_network}_obj_index_parameters"
+    knn_methods="${default_network}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+fi
+
+file_prefix="knn_query"
+knn_varying_k_stats_file="${file_prefix}_${default_network}_density_${default_density}_type_${default_type}_varying_k_stats.txt"
+knn_varying_density_stats_file="${file_prefix}_${default_network}_k_${default_k}_type_${default_type}_varying_density_stats.txt"
+knn_varying_network_stats_file="knn_query_density_${default_density}_k_${default_k}_type_${default_type}_varying_network_stats.txt"
+
+# Create Figures for each experiment
+
+# Varying k Figures
+if [[ $4 != "k" ]]; then
+    temp_file="temp_${default_network}_varying_k_density_${default_density}_${default_type}.txt"
+    output_file="${default_network}_varying_k_density_${default_density}_${default_type}.txt"
+    figure_file="${default_network}_varying_k_density_${default_density}_${default_type}"
+    x_tics=${k_values//,/:}
+    if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+        if [[ $edge_type != "t" ]]; then
+            plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+        else
+            plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+        fi
+    elif [[ $edge_type != "t" && $default_network == "USA" ]]; then
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12"
+    else
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+    fi
+    cat $stats_dir/$knn_varying_k_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+    bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "6,k,$x_tics,'','',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal maxcols 2,-2"
+fi
+
+# Varying Density Figures
+if [[ $4 != "density" ]]; then
+    temp_file="temp_${default_network}_varying_density_k_${default_k}_${default_type}.txt"
+    output_file="${default_network}_varying_density_k_${default_k}_${default_type}.txt"
+    figure_file="${default_network}_varying_density_k_${default_k}_${default_type}"
+    x_tics=${densities//,/:}
+    if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+        if [[ $edge_type != "t" ]]; then
+            plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+        else
+            plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+        fi
+    elif [[ $edge_type != "t" && $default_network == "USA" ]]; then
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12"
+    else
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+    fi
+    cat $stats_dir/$knn_varying_density_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+    bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Density,$x_tics,'',logscale,''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right top,horizontal maxcols 2,-2"
+fi
+
+# Varying Network Figures
+if [[ $edge_type != "t" ]]; then
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+else
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+fi
+if [[ $4 != "network" ]]; then
+    # We need to sort filtered file so that methods are together (rather than road networks) in original order
+    temp_file="temp_varying_network_density_${default_density}_k_${default_k}_${default_type}.txt"
+    output_file="varying_network_density_${default_density}_k_${default_k}_${default_type}.txt"
+    sed -e 's/\tine\t/\t1_ine\t/' -e 's/\troad\t/\t2_road\t/' -e 's/\tgtree\t/\t3_gtree\t/' -e 's/\tier_gtree\t/\t4_ier_gtree\t/' -e 's/\tier_phl\t/\t5_ier_phl\t/' -e 's/\tdist_brws\t/\t6_dist_brws\t/' -e 's/\tdb_rtree\t/\t7_db_rtree\t/' < $stats_dir/$knn_varying_network_stats_file > $fig_data_dir/$temp_file
+    sort -t $'\t' -k 5,5 -s $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+    sed -e 's/\t1_ine\t/\tine\t/' -e 's/\t2_road\t/\troad\t/' -e 's/\t3_gtree\t/\tgtree\t/' -e 's/\t4_ier_gtree\t/\tier_gtree\t/' -e 's/\t5_ier_phl\t/\tier_phl\t/' -e 's/\t6_dist_brws\t/\tdist_brws\t/' -e 's/\t7_db_rtree\t/\tdb_rtree\t/' < $fig_data_dir/$output_file > $fig_data_dir/$temp_file
+    cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+    rm $fig_data_dir/$temp_file
+    # figure_file="varying_network_density_${default_density}_k_${default_k}_${default_type}"
+    # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Road Network,usecol,1,'',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal,-2"
+    figure_file="varying_total_nodes_density_${default_density}_k_${default_k}_${default_type}"
+    bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "2,Number of Vertices,none,'',logscale,'10^%T'" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "bottom right,horizontal maxcols 2,-2"
+    # figure_file="varying_total_edges_density_${default_density}_k_${default_k}_${default_type}"
+    # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "3,Number of Edges,none,'',logscale,'10^%T'" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal,-2"
+fi

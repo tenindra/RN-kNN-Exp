@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. globalVariables
+
+mkdir -p "$idx_dir"
+mkdir -p "$stats_dir"
+mkdir -p "$obj_idx_dir"
+mkdir -p "$sets_dir"
+mkdir -p "$data_dir"
+mkdir -p "$data_dir/dimacs"
+mkdir -p "$data_dir/tpq"
+mkdir -p "$fig_dir"
+mkdir -p "$fig_data_dir"
+
+# Delete Object Sets/Indexes and Query Point Sets
+rm -rf "$obj_idx_dir"/*
+rm -rf "$sets_dir"/*
+
+# Optionally Delete Figures and Figure Data
+if [[ $1 == "fig+data" ]]; then
+    rm -rf "$fig_dir"/*
+    rm -rf "$fig_data_dir"/*
+    mkdir -p "$fig_dir"
+    mkdir -p "$fig_data_dir"
+fi

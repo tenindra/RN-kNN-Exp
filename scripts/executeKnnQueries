@@ -1,0 +1,90 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 method, $2 road_network, $3 object index, $4 query nodes separated by commas, $5 k, $6 index name (G-tree, ROAD)
+
+# Usage: $1=road network, $2=rtree branch factors, $3=method (silc or dist_brws),
+# $4=one of build, query, fig to limit what script does, $5=subset of leafsizes
+if [[ $1 == "--help" ||  $1 == "-h" || $# -lt 5 ]]; then 
+    if [[ $# -lt 3 && $1 != "--help" && $1 != "-h"  ]]; then
+        echo "Too few command-line parameters!"    
+    fi
+    echo -e "\nUsage: $0 method road_network object_index_file query_nodes k [index_name]"
+    echo -e "    method: kNN method supported by KnnQueryCommand"
+    echo -e "    road_network: dataset name (e.g. COL)"
+    echo -e "    object_index_file: object index files (just file name, path is assumed to be default)"
+    echo -e "    query_nodes: comma-separated query node IDs"
+    echo -e "    k: number of results to retrieve"
+    echo -e "    index_name: index name when the method is Gtree or ROAD"
+    exit 0
+fi
+
+# Put query node into a file so it can be tested
+tmp_road_network=$(echo $2 | awk '{print toupper($0)}')
+tmp_query_set_file="temp_query_set_file.txt"
+tmp_results_file="temp_results_file.txt"
+tmp_stats_file="temp_stats_file.txt"
+
+# Create temp query node set file
+IFS=',' read -a nodes <<< "$4"
+echo "$tmp_road_network random 0 1 ${#nodes[@]}" > $sets_dir/$tmp_query_set_file
+for i in "${!nodes[@]}"
+do
+    echo "${nodes[$i]}" >> $sets_dir/$tmp_query_set_file
+done
+
+# Determine original obj set file for INE
+if [[ $3 =~ ^([^_]+_[^_]+_[^_]+_[^_]+_[^_]+) ]]; then
+    obj_set_file="${BASH_REMATCH[1]}.txt"
+    ine_args="-c knn -m ine -k $5 -i $obj_idx_dir/$obj_set_file -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+else
+    echo "Could not extract original object file name!"
+    exit 1
+fi
+
+echo -e "\nExpected Results:"
+# echo "${exe_path}/nd_knn $ine_args"
+${exe_path}/nd_knn $ine_args
+
+if [[ $1 == "ine" ]]; then
+    # Nothing to compare against
+    exit 0
+elif [[ $1 == "silc" ]]; then
+    args="-c knn -m silc -k $5 -b $idx_dir/$tmp_road_network.silc -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "opt_silc" ]]; then
+    args="-c knn -m opt_silc -k $5 -b $idx_dir/$tmp_road_network.silc -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file -a $idx_dir/$tmp_road_network.junc -i $obj_idx_dir/$obj_set_file"
+elif [[ $1 == "dist_brws" ]]; then
+    args="-c knn -m dist_brws -k $5 -b $idx_dir/$tmp_road_network.silc -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "opt_db" ]]; then
+    args="-c knn -m opt_db -k $5 -b $idx_dir/$tmp_road_network.silc -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file -a $idx_dir/$tmp_road_network.junc -i $obj_idx_dir/$obj_set_file"
+elif [[ $1 == "road" ]]; then
+    args="-c knn -m road -k $5 -b $idx_dir/$6 -j $obj_idx_dir/$3 -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "gtree" ]]; then
+    args="-c knn -m gtree -k $5 -b $idx_dir/$6 -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "ier_dijk" ]]; then
+    args="-c knn -m ier_dijk -k $5 -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "ier_gtree" ]]; then
+    args="-c knn -m ier_gtree -k $5 -b $idx_dir/$6 -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "ier_phl" ]]; then
+    args="-c knn -m ier_phl -k $5 -b $idx_dir/$tmp_road_network.phl -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file"
+elif [[ $1 == "db_rtree" ]]; then
+    args="-c knn -m db_rtree -k $5 -b $idx_dir/$tmp_road_network.silc -j $obj_idx_dir/$3 -g $idx_dir/$tmp_road_network.bin -q $sets_dir/$tmp_query_set_file -r $stats_dir/$tmp_results_file -s $stats_dir/$tmp_stats_file -a $idx_dir/$tmp_road_network.junc -i $obj_idx_dir/$obj_set_file"
+elif [[ $1 == "ine_java" ]]; then
+    nd_knn_java="/home/ninja/projects/nd_knn_java/bin"
+    java -cp $nd_knn_java nd_knn_java.SingleKnn $data_dir/$tmp_road_network-d.graph $sets_dir/$tmp_query_set_file $obj_idx_dir/$obj_set_file $5
+    exit 0
+else
+    echo "Unrecognised method!"
+    exit 1
+fi
+
+# knn by ROAD
+
+echo -e "\nActual Results:"
+# echo "${exe_path}/nd_knn $args"
+${exe_path}/nd_knn $args
+
+rm -f $sets_dir/$tmp_query_set_file
+rm -f $stats_dir/$tmp_results_file
+rm -f $stats_dir/$tmp_stats_file

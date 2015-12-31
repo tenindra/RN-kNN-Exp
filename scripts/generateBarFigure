@@ -1,0 +1,154 @@
+#!/bin/bash
+
+# $1 output fig file, $2 input data file, $3 x-axis specs, $4 y-axis specs, $5 key specs (optional)
+
+# X-Axis Specs: column, label, x_tics (colon-separated or 'usecol' or 'none'), x_tics_column, logscale, format (x_tics_column, logscale and format should be '' when unused)
+# Y-Axis Specs: bg column, bg colour, bg title, fg1 column, fg1 colour, fg1 title, fg2 column, fg2 colour, fg2 title, label, logscale, format (bg title, fg specs, logscale and format should be '' when unused)
+# Key Specs: position, orientation, width (no omission alowed)
+
+# Default Settings
+gnu_terminal="postscript enhanced eps 32"
+fig_ext="eps"
+# gnu_terminal="pngcairo enhanced font '15'"
+# fig_ext="png"
+key_pos="right top"
+key_ort="horizontal"
+key_samplen="samplen 3"
+if [[ $fig_ext == "eps" ]]; then
+    key_spacing="spacing 1.1"
+    key_font="font ',28'"
+elif [[ $fig_ext == "png" ]]; then
+    key_spacing="spacing 1.25"
+    key_font="font ',15'"
+fi
+
+if [ "$#" -lt 5 ]; then
+    echo "Invalid number of command-line parameters"
+    exit 1
+fi
+
+IFS=',' read -ra x_specs <<< "$3"
+if [[ ${#x_specs[@]} != 6 ]]; then
+echo ${#x_specs[@]}
+    echo "Missing parameters in x-axis specification"
+    exit 1
+fi
+
+IFS=',' read -ra y_specs <<< "$4"
+if [[ ${#y_specs[@]} != 12 ]]; then
+    echo "Missing parameters in y-axis specification"
+    exit 1
+fi
+
+# Parse Specs for X-Axis
+plot_x_col=${x_specs[0]}
+plot_x_label=${x_specs[1]}
+
+if [[ ${x_specs[2]} == "usecol" ]]; then
+    plot_x_tics=""
+    plot_x_tics_col=":xtic(${x_specs[3]})"
+elif [[ ${x_specs[2]} == "none" ]]; then
+    plot_x_tics=""
+    plot_x_tics_col=""
+else
+    plot_x_tics="set xtics (${x_specs[2]//:/,})"
+    plot_x_tics_col=""
+fi
+
+if [[ ${x_specs[4]} == "logscale" ]]; then
+    plot_x_logscale="set logscale x"
+else
+    plot_x_logscale=""
+fi
+
+if [[ ${x_specs[5]} != "''" ]]; then
+    plot_x_format="set format x ${x_specs[5]}"
+else
+    plot_x_format=""
+fi
+
+# Parse Specs for Y-Axis
+plot_bg_y_col=${y_specs[0]}
+plot_bg_colour=${y_specs[1]}
+plot_bg_title=${y_specs[2]}
+plot_fg1_y_col=${y_specs[3]}
+plot_fg1_colour=${y_specs[4]}
+plot_fg1_title=${y_specs[5]}
+plot_fg2_y_col=${y_specs[6]}
+plot_fg2_colour=${y_specs[7]}
+plot_fg2_title=${y_specs[8]}
+plot_y_label=${y_specs[9]}
+
+if [[ ${y_specs[10]} == "logscale" ]]; then
+    plot_y_logscale="set logscale y"
+else
+    plot_y_logscale=""
+fi
+
+if [[ ${y_specs[11]} != "''" ]]; then
+    plot_y_format="set format y ${y_specs[11]}"
+else
+    plot_y_format=""
+fi
+
+# Generate Line Setting Commands and Plot Commands
+data_cmd="set style data histograms"
+data_style_cmd="set style histogram cluster gap 1"
+if [[ $plot_fg1_y_col == "''" ]]; then
+    plot_cmd="plot ${plot_cmd}'$2' using $plot_bg_y_col$plot_x_tics_col title '' lt rgb '$plot_bg_colour'"
+elif [[ $plot_fg2_y_col == "''" ]]; then
+    plot_cmd="plot ${plot_cmd}'$2' using $plot_bg_y_col$plot_x_tics_col title '$plot_bg_title' lt rgb '$plot_bg_colour', '' using $plot_fg1_y_col title '$plot_fg1_title' lt rgb '$plot_fg1_colour'"
+else
+    plot_cmd="plot ${plot_cmd}'$2' using $plot_bg_y_col$plot_x_tics_col title '$plot_bg_title' lt rgb '$plot_bg_colour', '' using $plot_fg1_y_col title '$plot_fg1_title' lt rgb '$plot_fg1_colour', '' using $plot_fg2_y_col title '$plot_fg2_title' lt rgb '$plot_fg2_colour'"
+fi
+
+# Generate Key Setting Command
+if [[ $5 != "" ]]; then
+    IFS=',' read -ra key_specs <<< "$5"
+    if [[ ${#key_specs[@]} != 3 ]]; then
+        echo "Must provide all key specifications!"
+        exit 1
+    fi
+    key_pos="${key_specs[0]}"
+    key_ort="${key_specs[1]}"
+    key_width="width ${key_specs[2]}"
+    key_cmd="set key $key_pos $key_ort $key_samplen $key_spacing $key_width $key_font"
+else
+    key_cmd="set key $key_pos $key_ort $key_samplen $key_spacing $key_font"
+fi
+
+data_file=$2
+fig_script_file="${data_file%.*}.gp"
+
+cat > $fig_script_file <<- EOM
+    reset
+    set terminal $gnu_terminal
+    set output '$1.$fig_ext'
+
+    unset key
+
+    $data_cmd
+    $data_style_cmd
+    set style fill solid
+    set boxwidth 0.8
+    
+    $plot_x_logscale
+    $plot_y_logscale
+
+    set xlabel '$plot_x_label'
+    set ylabel '$plot_y_label'
+    
+    $plot_x_format
+    $plot_y_format
+    
+    $plot_x_tics
+
+    set autoscale xfix
+
+    $key_cmd
+    
+    $plot_cmd
+EOM
+
+gnuplot $fig_script_file # 2>/dev/null
+

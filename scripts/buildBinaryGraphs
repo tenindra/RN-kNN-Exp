@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 list of comma-separated specific road networks to build for ("all" for all)
+# $2 indicates whether to build dynamic graphs or not
+
+# We overwrite global variables here to re-run specific cases
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+
+if [[ $1 != "" && $1 != "all" ]]; then
+    IFS=',' read -ra road_networks <<< "$1"
+fi
+
+for element in ${road_networks[@]}
+do
+    edge_file="$element-$edge_type.graph"
+    node_file="$element-$edge_type.coordinates" # File same for both, default to d
+    if [[ $2 == "build_dyn" ]]; then
+        args="-c dynamic_graph -e $data_dir/$edge_file -n $data_dir/$node_file -o $idx_dir/${element}_dynamic.bin -s $stats_dir/dyn_graph_stats.txt"
+        ${exe_path}/nd_knn $args
+    else
+        args="-c graph -e $data_dir/$edge_file -n $data_dir/$node_file -o $idx_dir/${element}.bin -s $stats_dir/$idx_stats_file"
+        ${exe_path}/nd_knn $args
+    fi
+done

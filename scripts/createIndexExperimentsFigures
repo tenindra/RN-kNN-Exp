@@ -1,0 +1,166 @@
+#!/bin/bash
+
+. globalVariables
+
+# Index Time/Size vs. Nodes/Network
+output_file="index_stats_vs_nodes.txt"
+temp_file="temp_index_stats_vs_nodes.txt"
+# We need sort file so that it grouped by method
+sed -e 's/graph/1_graph/' -e 's/gtree/2_gtree/' -e 's/route_overlay/3_route_overlay/' -e 's/ch/8_ch/' -e 's/tnr/9_tnr/' -e 's/phl/6_phl/' -e 's/silc/7_silc/'  -e 's/alt/9_alt/' < $stats_dir/$idx_stats_file > $fig_data_dir/$temp_file
+sort -t $'\t' -k 5,5 -k 2,2 -s -n $fig_data_dir/$temp_file > $fig_data_dir/$output_file # Sort by number of nodes as second column
+sed -e 's/1_graph/graph/' -e 's/2_gtree/gtree/' -e 's/3_route_overlay/route_overlay/' -e 's/8_ch/ch/' -e 's/9_tnr/tnr/' -e 's/6_phl/phl/' -e 's/7_silc/silc/' -e 's/9_alt/alt/' < $fig_data_dir/$output_file > $fig_data_dir/$temp_file
+cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+cat $fig_data_dir/$output_file | bash excludeStatsRows 5 graph > $fig_data_dir/$temp_file # Get rid of graph for index time figures
+
+if [[ $edge_type != "t" ]]; then
+    # plot_lines="Gtree;red;8,ROAD;dark-green;3,CH;navy;2,TNR;dark-orange;1,PHL;dark-magenta;12,DisBrw;dark-red;4"
+    plot_lines="Gtree;red;8,ROAD;dark-green;3,PHL;dark-magenta;12,DisBrw;dark-red;4"
+else
+    plot_lines="Gtree;red;8,ROAD;dark-green;3,PHL;dark-magenta;12"
+fi
+# figure_file="index_time_vs_network"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "0,Road Network,usecol,1,'',''" "(\$6/1000),Construction Time (s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+figure_file="index_time_vs_nodes"
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "2,Number of Vertices,none,'',logscale,'10^%T'" "(\$6/1000),Construction Time (s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal maxcols 2,-2"
+rm $fig_data_dir/$temp_file
+
+if [[ $edge_type != "t" ]]; then
+#     plot_lines="INE;blue;6,Gtree;red;8,ROAD;dark-green;3,CH;navy;2,TNR;dark-orange;1,PHL;dark-magenta;12,DisBrw;dark-red;4"
+    plot_lines="INE;blue;6,Gtree;red;8,ROAD;dark-green;3,PHL;dark-magenta;12,DisBrw;dark-red;4"
+else
+    plot_lines="INE;blue;6,Gtree;red;8,ROAD;dark-green;3,PHL;dark-magenta;12"
+fi
+# figure_file="index_size_vs_network"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Road Network,usecol,1,'',''" "7,Index Size (MB),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+figure_file="index_size_vs_nodes"
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "2,Number of Vertices,none,'',logscale,'10^%T'" "7,Index Size (MB),logscale,'10^%T'" "$plot_lines" "left top,horizontal maxcols 2,-2"
+
+# # Road and G-tree Borders vs. Nodes/Network
+# plot_lines="Gtree;red;8,ROAD;dark-green;3"
+# # For borders figures we exclude all indexes that don't use borders (i.e. everything except G-tree and ROAD)
+# cat $fig_data_dir/$output_file | bash excludeStatsRows 5 graph | bash excludeStatsRows 5 silc | bash extractColumnAndAppend 4 "num_borders=([[:digit:]]+)" \
+# | bash extractColumnAndAppend 4 "num_b2b_rel=([[:digit:]]+)" | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Column 8 and 9
+# # figure_file="index_borders_vs_network"
+# # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "0,Road Network,usecol,1,'',''" "8,Num. of Borders,'',''" "$plot_lines" "right bottom,vertical,-2"
+# # figure_file="index_borders_vs_nodes"
+# # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "2,Number of Vertices,none,'',logscale,'10^%T'" "8,Num. of Borders,'',''" "$plot_lines" "right bottom,vertical,-2"
+# # figure_file="index_borders_sq_vs_network"
+# # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "0,Road Network,usecol,1,'',''" "9,B-to-B Relationships,logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# figure_file="index_borders_sq_vs_nodes"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "2,Number of Vertices,none,'',logscale,'10^%T'" "9,B-to-B Relationships,logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# rm $fig_data_dir/$temp_file
+
+# # G-tree Tree Path Cost vs. Nodes/Network
+# plot_lines="Gtree;red;8"
+# # For borders figures we exclude all indexes that don't use borders (i.e. everything except G-tree and ROAD)
+# cat $fig_data_dir/$output_file | bash excludeStatsRows 5 road | bash excludeStatsRows 5 graph | bash excludeStatsRows 5 silc \
+# | bash extractColumnAndAppend 4 "avg_path_cost=([[:digit:]]+)" | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Column 8
+# # figure_file="gtree_path_cost_vs_network"
+# # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "0,Road Network,usecol,1,'',''" "8,Avg. Gtree Path Cost,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# figure_file="gtree_path_cost_vs_nodes"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "2,Number of Vertices,none,'',logscale,'10^%T'" "8,Avg. Gtree Path Cost,logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# rm $fig_data_dir/$temp_file
+
+# # Index Time/Size vs. Edges
+# output_file="index_stats_vs_edges.txt"
+# temp_file="temp_index_stats_vs_edges.txt"
+# # We need sort file so that it grouped by method
+# sed -e 's/graph/1_graph/' -e 's/gtree/2_gtree/' -e 's/route_overlay/3_route_overlay/' -e 's/ch/4_ch/' -e 's/tnr/5_tnr/' -e 's/phl/6_phl/' -e 's/silc/7_silc/'  -e 's/alt/9_alt/' < $stats_dir/$idx_stats_file > $fig_data_dir/$temp_file
+# sort -t $'\t' -k 5,5 -k 3,3 -s -n $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+# sed -e 's/1_graph/graph/' -e 's/2_gtree/gtree/' -e 's/3_route_overlay/route_overlay/' -e 's/4_ch/ch/' -e 's/5_tnr/tnr/' -e 's/6_phl/phl/' -e 's/7_silc/silc/' -e 's/9_alt/alt/' < $fig_data_dir/$output_file > $fig_data_dir/$temp_file
+# cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+# cat $fig_data_dir/$output_file | bash excludeStatsRows 5 graph > $fig_data_dir/$temp_file # Get rid of graph for index time figures
+# 
+# plot_lines="Gtree;red;8,ROAD;dark-green;3,CH;magenta;2,TNR;dark-orange;1,PHL;dark-magenta;12,DisBrw;dark-red;4"
+# figure_file="index_time_vs_edges"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "3,Number of Edges,none,'',logscale,'10^%T'" "(\$6/1000),Construction Time (s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# rm $fig_data_dir/$temp_file
+# plot_lines="INE;blue;6,Gtree;red;8,ROAD;dark-green;3,CH;magenta;2,TNR;dark-orange;1,PHL;dark-magenta;12,DisBrw;dark-red;4"
+# figure_file="index_size_vs_edges"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "3,Number of Edges,none,'',logscale,'10^%T'" "7,Index Size (MB),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# 
+# # Road and G-tree Borders vs. Edges
+# plot_lines="Gtree;red;8,ROAD;dark-green;3"
+# # For borders figures we exclude all indexes that don't use borders (i.e. everything except G-tree and ROAD)
+# cat $fig_data_dir/$output_file | bash excludeStatsRows 5 graph | bash excludeStatsRows 5 silc | bash extractColumnAndAppend 4 "num_borders=([[:digit:]]+)" \
+# | bash extractColumnAndAppend 4 "num_b2b_rel=([[:digit:]]+)" | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Column 8 and 9
+# # figure_file="index_borders_vs_edges"
+# # bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "3,Number of Edges,none,'',logscale,'10^%T'" "8,Num. of Borders,'',''" "$plot_lines" "right bottom,vertical,-2"
+# figure_file="index_borders_sq_vs_edges"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "3,Number of Edges,none,'',logscale,'10^%T'" "9,B-to-B Relationships,logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# rm $fig_data_dir/$temp_file
+# 
+# # G-tree Tree Path Cost vs. Edges
+# plot_lines="Gtree;red;8"
+# # For borders figures we exclude all indexes that don't use borders (i.e. everything except G-tree and ROAD)
+# cat $fig_data_dir/$output_file | bash excludeStatsRows 5 road | bash excludeStatsRows 5 graph | bash excludeStatsRows 5 silc \
+# | bash extractColumnAndAppend 4 "avg_path_cost=([[:digit:]]+)" | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Column 8
+# figure_file="gtree_path_cost_vs_edges"
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "3,Number of Edges,none,'',logscale,'10^%T'" "8,Avg. Gtree Path Cost,logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# rm $fig_data_dir/$temp_file
+
+# Object Index Time/Size vs. Varying Density
+x_tics=$(IFS=':'; echo "${densities_arr[*]}")  # Join array delimited by comma
+temp_file="temp_object_index_stats_varying_density_${default_network}.txt"
+output_file="object_index_stats_varying_density_${default_network}.txt"
+cat $stats_dir/$obj_stats_file | bash filterStatsRows 1 ${default_network} > $fig_data_dir/$temp_file
+cat $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+cat $fig_data_dir/$output_file | bash excludeStatsRows 5 ine | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Get rid of INE for index time figures
+#     plot_lines="Occurrence List;red;8,Association Directory;dark-green;12,R-tree;black;3,Quadtree;brown;4"
+plot_lines="G-tree;red;8,ROAD;dark-green;3,IER/DB;black;12,Quad.;dark-red;4"
+figure_file="object_index_time_vs_varying_density_${default_network}"
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "9,Density,$x_tics,'',logscale,''" "6,Construction Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+cat $fig_data_dir/$output_file | bash splitStatsRows 5 > $fig_data_dir/$temp_file
+cat $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+rm $fig_data_dir/$temp_file
+#     plot_lines="INE;blue;6,Occurrence List;red;8,Association Directory;dark-green;12,R-tree;black;3,Quadtree;brown;4"
+plot_lines="INE;blue;6,G-tree;red;8,ROAD;dark-green;3,IER/DB;black;12,Quad.;dark-red;4"
+figure_file="object_index_size_vs_varying_density_${default_network}"
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Density,$x_tics,'',logscale,''" "7,Index Size (KB),logscale,'10^{%T}'" "$plot_lines" "left top,horizontal maxcols 2,-2"
+
+# Object Index Time/Size vs. Varying Density (USA)
+default_network="USA"
+x_tics=$(IFS=':'; echo "${densities_arr[*]}")  # Join array delimited by comma
+temp_file="temp_object_index_stats_varying_density_${default_network}.txt"
+output_file="object_index_stats_varying_density_${default_network}.txt"
+cat $stats_dir/$obj_stats_file | bash filterStatsRows 1 ${default_network} > $fig_data_dir/$temp_file
+cat $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+cat $fig_data_dir/$output_file | bash excludeStatsRows 5 ine | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Get rid of INE for index time figures
+#     plot_lines="Occurrence List;red;8,Association Directory;dark-green;12,R-tree;black;3,Quadtree;brown;4"
+plot_lines="G-tree;red;8,ROAD;dark-green;3,IER/DB;black;12"
+figure_file="object_index_time_vs_varying_density_${default_network}"
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "9,Density,$x_tics,'',logscale,''" "6,Construction Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+cat $fig_data_dir/$output_file | bash splitStatsRows 5 > $fig_data_dir/$temp_file
+cat $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+rm $fig_data_dir/$temp_file
+#     plot_lines="INE;blue;6,Occurrence List;red;8,Association Directory;dark-green;12,R-tree;black;3,Quadtree;brown;4"
+plot_lines="INE;blue;6,G-tree;red;8,ROAD;dark-green;3,IER/DB;black;12"
+figure_file="object_index_size_vs_varying_density_${default_network}"
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Density,$x_tics,'',logscale,''" "7,Index Size (KB),logscale,'10^{%T}'" "$plot_lines" "left top,horizontal maxcols 2,-2"
+
+# # Object Index Time/Size vs. Varying Network
+# for i in "${!densities_arr[@]}"; do 
+#     temp_file="temp_object_index_stats_varying_network_${densities_arr[$i]}.txt"
+#     output_file="object_index_stats_varying_network_${densities_arr[$i]}.txt"
+#     # We need sort file so that it grouped by method
+#     sed -e 's/ine/1_ine/' -e 's/occ_list/2_occ_list/' -e 's/assoc_dir/3_assoc_dir/' -e 's/rtree\t/4_rtree\t/' -e 's/quadtree\t/5_quadtree\t/' < $stats_dir/$obj_stats_file > $fig_data_dir/$temp_file
+#     sort -t $'\t' -k 5,5 -s -n $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+#     sed -e 's/1_ine/ine/' -e 's/2_occ_list/occ_list/' -e 's/3_assoc_dir/assoc_dir/' -e 's/4_rtree\t/rtree\t/' -e 's/5_quadtree\t/quadtree\t/' < $fig_data_dir/$output_file > $fig_data_dir/$temp_file
+#     cat $fig_data_dir/$temp_file | bash filterStatsRows 9 ${densities_arr[$i]} > $fig_data_dir/$output_file
+#     cat $fig_data_dir/$output_file | bash excludeStatsRows 5 ine | bash splitStatsRows 5 > $fig_data_dir/$temp_file # Get rid of INE for index time figures
+# #     plot_lines="Occurrence List;red;8,Association Directory;dark-green;12,R-tree;black;3,Quadtree;brown;4"
+#     plot_lines="G-tree;red;8,ROAD;dark-green;3,IER;black;12,DisBrw;dark-red;4"    
+# #     figure_file="object_index_time_vs_varying_network_${densities_arr[$i]}"
+# #     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "0,Road Network,usecol,1,'',''" "6,Construction Time ({/Symbol m}s),logscale,'10^%T''" "$plot_lines" "right bottom,vertical,-2"
+#     figure_file="object_index_time_vs_varying_network_${densities_arr[$i]}"
+#     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$temp_file "2,Number of Vertices,none,'',logscale,'10^%T'" "6,Construction Time ({/Symbol m}s),logscale,'10^%T''" "$plot_lines" "right bottom,vertical,-2"
+#     cat $fig_data_dir/$output_file | bash splitStatsRows 5 > $fig_data_dir/$temp_file
+#     cat $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+#     rm $fig_data_dir/$temp_file
+# #     plot_lines="INE;blue;6,Occurrence List;red;8,Association Directory;dark-green;12,R-tree;black;3,Quadtree;brown;4"
+# plot_lines="INE;blue;6,G-tree;red;8,ROAD;dark-green;3,IER;black;12,DisBrw;dark-red;4"
+# #     figure_file="object_index_size_vs_varying_network_${densities_arr[$i]}"
+# #     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Road Network,usecol,1,'',''" "7,Index Size (KB),logscale,'10^{%T}'" "$plot_lines" "left top,horizontal,-2"
+#     figure_file="object_index_size_vs_total_nodes_${densities_arr[$i]}"
+#     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "2,Number of Vertices,none,'',logscale,'10^%T'" "7,Index Size (KB),logscale,'10^{%T}'" "$plot_lines" "left top,horizontal,-2"
+# done

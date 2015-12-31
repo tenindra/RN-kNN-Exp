@@ -1,0 +1,83 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 new default k, $2 new default density, $3 new default network, $4 don't run something
+
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# knn_parameters=("ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$DE_index_parameters,$DE_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$VT_index_parameters,$VT_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$ME_index_parameters,$ME_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$COL_index_parameters,$COL_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$NW_index_parameters,$NW_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$CAL_index_parameters,$CAL_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$E_index_parameters,$E_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$W_index_parameters,$W_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$CTR_index_parameters,$CTR_obj_index_parameters,verify=0"
+#                 "ine=0,gtree=0,road=0,ier=0,silc=0,dist_brws=0,ier_phl=0,$USA_index_parameters,$USA_obj_index_parameters,verify=0")
+# densities="1,0.1,0.01,0.001,0.0001"
+# types="random,uniform"
+# num_sets="25"
+# num_points="25"
+# k_values="1,5,10,25,50"
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    default_k=$1
+fi
+
+if [[ $2 != "" && $2 != "default" ]]; then
+    default_density=$2
+fi
+
+if [[ $3 != "" ]]; then
+    default_network=$3
+    index_parameters="${3}_index_parameters"
+    obj_index_parameters="${3}_obj_index_parameters"
+    knn_methods="${3}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+else
+    index_parameters="${default_network}_index_parameters"
+    obj_index_parameters="${default_network}_obj_index_parameters"
+    knn_methods="${default_network}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+fi
+
+file_prefix="knn_query"
+knn_varying_k_stats_file="${file_prefix}_${default_network}_density_${default_density}_type_${default_type}_varying_k_stats.txt"
+knn_varying_density_stats_file="${file_prefix}_${default_network}_k_${default_k}_type_${default_type}_varying_density_stats.txt"
+knn_varying_network_stats_file="knn_query_density_${default_density}_k_${default_k}_type_${default_type}_varying_network_stats.txt"
+
+# Run kNN queries for on default parameters with varying k
+if [[ $4 != "k" ]]; then
+    > $stats_dir/$knn_varying_k_stats_file # Truncate file
+    echo -e "\nExperiment 1: Varying k with default parameters"
+    pts_filename="$(printf "%03d" $num_points)"
+    args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $k_values -n $num_sets -d $default_density -t $default_type -v $ignore_variable -p $default_knn_parameters -f $output_path -s $stats_dir/$knn_varying_k_stats_file"
+    ${exe_path}/nd_knn $args
+fi
+    
+# Run kNN queries for on default parameters with varying density
+if [[ $4 != "density" ]]; then
+    > $stats_dir/$knn_varying_density_stats_file # Truncate file
+    echo -e "\nExperiment 2: Varying density with default parameters"
+    pts_filename="$(printf "%03d" $num_points)"
+    args="-c exp -e knn -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $default_k -n $num_sets -d $densities -t $default_type -v $ignore_variable -p $default_knn_parameters -f $output_path -s $stats_dir/$knn_varying_density_stats_file"
+    ${exe_path}/nd_knn $args
+fi
+
+# Run kNN queries for on default parameters with varying road network
+if [[ $4 != "network" ]]; then
+    > $stats_dir/$knn_varying_network_stats_file # Truncate file
+    echo -e "\nExperiment 3: Varying network with default parameters"
+    for i in "${!road_networks[@]}"; do 
+        echo -e "\nRun kNN queries for ${road_networks[$i]}..."
+        pts_filename="$(printf "%03d" $num_points)"
+        args="-c exp -e knn -g $idx_dir/${road_networks[$i]}.bin -q $sets_dir/${road_networks[$i]}_$pts_filename.txt -k $default_k -n $num_sets -d $default_density -t $default_type -v $ignore_variable -p ${knn_parameters[$i]} -f $output_path -s $stats_dir/$knn_varying_network_stats_file"
+        ${exe_path}/nd_knn $args
+    done
+fi
+
+# Create Figures for each experiment
+bash createDefaultKnnExperimentFigures $1 $2 $3 $4

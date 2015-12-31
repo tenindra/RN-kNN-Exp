@@ -1,0 +1,58 @@
+#!/bin/bash
+
+. globalVariables
+
+# Specific Experiments
+
+echo -e "\nIER Shortest Path Methods"
+
+# Figure 4a
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyk.txt"
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "MGtree;black;12,PHL;dark-magenta;2,TNR;dark-orange;6,CH;dark-green;3" default default "right bottom,horizontal maxcols 2,-3" default $default_density_string
+
+# Figure 4b
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyd.txt"
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "MGtree;black;12,PHL;dark-magenta;2,TNR;dark-orange;6,CH;dark-green;3" default default "right bottom,horizontal maxcols 2,-3" $default_k default
+
+# Figure 
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyn.txt"
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "MGtree;black;12,PHL;dark-magenta;2,TNR;dark-orange;6,CH;dark-green;3" all default "right top,horizontal maxcols 2,-2" $default_k $default_density_string
+
+
+# Default Experiments
+
+# Figure X, Y, Z
+bash createIndexExperimentsFigures
+
+# Figure 17a, 17b, 17c
+bash createDefaultKnnExperimentFigures 10 0.00100 NW
+
+# Figure X, Y, Z
+bash createDefaultKnnExperimentFigures 10 0.00100 USA network  # Don't run network (run in a previous command)
+
+
+# Minimum Object Distance Object Sets
+
+# Figure 
+echo -e "\nRange Distance Experiments: NW, k=10, d=0.001, m=5"
+bash createMinMaxDistObjectsExperimentsFigures min_nd 0.001 "1,2,3,4,5" 3 NW;
+
+# # Figure 
+echo -e "\nRange Distance Experiments: USA, k=10, d=0.001, m=8"
+bash createMinMaxDistObjectsExperimentsFigures min_nd 0.001 "1,2,3,4,5,6,7,8" 4 USA;
+
+
+# Clustered Object Sets
+
+# Figure 
+echo -e "\nClustered Experiments: NW, k=10, d=0.001, |C|=5,"
+bash createClusteredObjectsExperimentsFigures 0.001 "0.1,0.01,0.001,0.0001" 5 "5,10,25,50,100" NW;
+
+
+# Real-World Object Sets
+
+bash createRealWorldPOIExperimentsFigures default NW;
+bash createRealWorldPOIExperimentsFigures default USA;

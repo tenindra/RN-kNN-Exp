@@ -1,0 +1,25 @@
+#!/bin/bash
+
+. globalVariables
+
+# We overwrite global variables here to re-run specific cases
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# obj_parameters=("obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$DE_index_parameters,$DE_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$VT_index_parameters,$VT_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$ME_index_parameters,$ME_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$COL_index_parameters,$COL_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$NW_index_parameters,$NW_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$CAL_index_parameters,$CAL_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$E_index_parameters,$E_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$W_index_parameters,$W_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$CTR_index_parameters,$CTR_obj_index_parameters"
+#                 "obj_sets=0,occ_list=0,assoc_dir=0,quadtree=0,rtree=0,$USA_index_parameters,$USA_obj_index_parameters")
+# densities="1,0.1,0.01,0.001,0.0001"
+# types="random,uniform"
+# num_sets="25"
+
+for i in "${!road_networks[@]}"; do 
+    echo -e "\nBuilding object indexes for ${road_networks[$i]}..." 
+    args="-c exp -e objects -g $idx_dir/${road_networks[$i]}.bin -n $num_sets -d $densities -t $default_type -v $ignore_variable -p ${obj_parameters[$i]} -f $output_path -s $stats_dir/$obj_stats_file"
+    ${exe_path}/nd_knn $args
+done

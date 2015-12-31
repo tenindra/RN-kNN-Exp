@@ -1,0 +1,180 @@
+#!/bin/bash
+
+# $1 output fig file, $2 input data file, $3 x-axis specs, $4 y-axis specs, $5 plot line specs, $6 key specs (optional)
+
+# X-Axis Specs: column, label, x_tics (colon-separated or 'usecol' or 'none'), x_tics_column, logscale, format (x_tics_column, logscale and format should be '' when unused)
+# Y-Axis Specs: column, label, logscale, format (logscale and format should be '' when unused)
+# Line Specs: label, colour, point types (colour and point types should be ommitted when unused)
+# Key Specs: position, orientation, width (no omission alowed)
+
+# Default Settings
+gnu_terminal="postscript enhanced eps 32"
+fig_ext="eps"
+# gnu_terminal="pngcairo enhanced font '15'"
+# fig_ext="png"
+default_line_colours=('blue' 'red' 'dark-green' 'brown' 'violet' 'black' 'dark-cyan' 'navy' 'dark-magenta;')
+default_line_pts=(6 8 12 4 2 3 1 10 14)
+key_pos="right top"
+key_ort="horizontal"
+key_samplen="samplen 3"
+if [[ $fig_ext == "eps" ]]; then
+    key_spacing="spacing 1.1"
+    key_font="font ',28'"
+elif [[ $fig_ext == "png" ]]; then
+    key_spacing="spacing 1.25"
+    key_font="font ',15'"
+fi
+
+if [ "$#" -lt 5 ]; then
+    echo "Invalid number of command-line parameters"
+    exit 1
+fi
+
+IFS=',' read -ra x_specs <<< "$3"
+if [[ ${#x_specs[@]} != 6 ]]; then
+echo ${#x_specs[@]}
+    echo "Missing parameters in x-axis specification"
+    exit 1
+fi
+
+IFS=',' read -ra y_specs <<< "$4"
+if [[ ${#y_specs[@]} != 4 ]]; then
+    echo "Missing parameters in y-axis specification"
+    exit 1
+fi
+
+# Parse Specs for X-Axis
+plot_x_col=${x_specs[0]}
+plot_x_label=${x_specs[1]}
+
+if [[ ${x_specs[2]} == "usecol" ]]; then
+    plot_x_tics=""
+    plot_x_tics_col=":xticlabels(${x_specs[3]})"
+elif [[ ${x_specs[2]} == "none" ]]; then
+    plot_x_tics=""
+    plot_x_tics_col=""
+else
+    plot_x_tics="set xtics font ',38,' (${x_specs[2]//:/,})"
+    plot_x_tics_col=""
+fi
+
+if [[ ${x_specs[4]} == "logscale" ]]; then
+    plot_x_logscale="set logscale x"
+else
+    plot_x_logscale=""
+fi
+
+if [[ ${x_specs[5]} != "''" ]]; then
+    plot_x_format="set format x ${x_specs[5]}"
+else
+    plot_x_format=""
+fi
+
+# Parse Specs for Y-Axis
+plot_y_col=${y_specs[0]}
+plot_y_label=${y_specs[1]}
+
+if [[ ${y_specs[2]} == "logscale" ]]; then
+    plot_y_logscale="set logscale y"
+else
+    plot_y_logscale=""
+fi
+
+if [[ ${y_specs[3]} != "''" ]]; then
+    plot_y_format="set format y ${y_specs[3]}"
+else
+    plot_y_format=""
+fi
+
+# Parse Lines and Display Settings
+IFS=',' read -ra plot_line_specs <<< "$5"
+if [[ ${#plot_line_specs[@]} == 0 ]]; then
+    echo "No plot lines were provided!"
+    exit 1
+fi
+
+plot_line_labels=()
+plot_line_colours=()
+plot_line_pts=()
+for i in "${!plot_line_specs[@]}"; do 
+    IFS=';' read -ra temp_line_specs <<< "${plot_line_specs[$i]}"
+    plot_line_labels+=("${temp_line_specs[0]}")
+    # If line style is empty use defaults
+    if [[ ${temp_line_specs[1]} != "" ]]; then
+        plot_line_colours+=("${temp_line_specs[1]}")
+    else
+        plot_line_colours+=("${default_line_colours[$i]}")
+    
+    fi
+    if [[ ${temp_line_specs[2]} != "" ]]; then
+        plot_line_pts+=("${temp_line_specs[2]}")
+    else
+        plot_line_pts+=("${default_line_pts[$i]}")
+    fi
+done
+
+# Generate Line Setting Commands and Plot Commands
+plot_cmd="plot "
+line_style_cmd=""
+for i in "${!plot_line_specs[@]}"; do
+    line_num=$(($i+1))
+    if [[ $i != 0 ]]; then 
+        plot_cmd="${plot_cmd}, "
+    fi
+    line_style_cmd="${line_style_cmd}set style line $line_num lc rgb '${plot_line_colours[$i]}' lt 1 lw 4 pt ${plot_line_pts[$i]} ps 4.5; "
+    plot_cmd="${plot_cmd}'$2' using $plot_x_col:$plot_y_col$plot_x_tics_col index $i title '${plot_line_labels[$i]}' with linespoints ls $line_num"
+done
+
+# Generate Key Setting Command
+if [[ $6 != "" ]]; then
+    IFS=',' read -ra key_specs <<< "$6"
+    if [[ ${#key_specs[@]} != 3 ]]; then
+        echo "Must provide all key specifications!"
+        exit 1
+    fi
+    key_pos="${key_specs[0]}"
+    key_ort="${key_specs[1]}"
+    key_width="width ${key_specs[2]}"
+    key_cmd="set key $key_pos $key_ort $key_samplen $key_spacing $key_width $key_font"
+else
+    key_cmd="set key $key_pos $key_ort $key_samplen $key_spacing $key_font"
+fi
+
+# echo -e "$line_style_cmd"
+# echo -e "$plot_cmd"
+# echo -e "$key_cmd"
+# exit 1
+
+data_file=$2
+fig_script_file="${data_file%.*}.gp"
+
+cat > $fig_script_file <<- EOM
+    reset
+    set terminal $gnu_terminal
+    set output '$1.$fig_ext'
+
+    set border linewidth 1.5
+    $line_style_cmd
+
+    unset key
+
+    $plot_x_logscale
+    $plot_y_logscale
+
+    set xlabel '$plot_x_label'
+    set ylabel '$plot_y_label'
+    
+    $plot_x_format
+    $plot_y_format
+    
+    $plot_x_tics
+
+    set autoscale xfix
+
+    $key_cmd
+    
+    $plot_cmd
+EOM
+
+gnuplot $fig_script_file # 2>/dev/null
+

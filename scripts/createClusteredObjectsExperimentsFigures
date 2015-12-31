@@ -1,0 +1,144 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 default_density (must agree with cluster sizes)
+# $2 comma-separated densities in increasing order
+# $3 default_cluster_size (must agree with densities)
+# $4 comma-separated cluster sizes in increasing order
+# $5 road_network: default or some other road network
+
+type="partition"
+default_density="0.001"
+densities="0.1,0.01,0.001,0.0001"
+default_cluster_size="5"
+cluster_sizes="5,10,25,50,100"
+clusters="1,10,100,1000"
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    default_density=$1
+fi
+
+if [[ $2 != "" && $2 != "default" ]]; then
+    densities=$2
+fi
+
+if [[ $3 != "" && $3 != "default" ]]; then
+    default_cluster_size=$3
+fi
+
+if [[ $4 != "" && $4 != "default" ]]; then
+    cluster_sizes=$4
+fi
+
+IFS=',' read -a cluster_sizes_arr <<< "$cluster_sizes"
+
+if [[ $default_density == "" || $densities == "" || $default_cluster_size == "" || $cluster_sizes == "" ]]; then
+    echo "Invalid input parameters must specific default density, default cluster size, densities and cluster sizes!"
+    exit 1
+fi
+
+if [[ $5 != "" && $5 != "none" ]]; then
+    default_network=$5
+    index_parameters="${5}_index_parameters"
+    obj_index_parameters="${5}_obj_index_parameters"
+    default_parameters="${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_methods,$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+fi
+
+file_prefix="clustered_sets"
+partition_obj_stats_file="${file_prefix}_obj_index_stats.txt"
+partition_knn_varying_k_stats_file="${file_prefix}_knn_query_varying_k_stats.txt"
+partition_knn_varying_density_stats_file="${file_prefix}_${default_network}_k_${default_k}_clustersize_${default_cluster_size}_size_knn_query_varying_density_stats.txt"
+partition_knn_varying_network_stats_file="${file_prefix}_knn_query_density_${default_density}_k_${default_k}_clustersize_${default_cluster_size}_varying_network_stats.txt"
+partition_knn_varying_clustersizes_stats_file="${file_prefix}_${default_network}_knn_query_density_${default_density}_k_${default_k}_varying_clustersizes_stats.txt"
+partition_knn_varying_clusters_stats_file="${file_prefix}_${default_network}_knn_query_k_${default_k}_clustersize_${default_cluster_size}_varying_clusters_stats.txt"
+
+# Varying k Figure
+temp_file="temp_${file_prefix}_${default_network}_varying_k_density_${default_density}_clustersize_${default_cluster_size}_${type}.txt"
+output_file="${file_prefix}_${default_network}_varying_k_density_${default_density}_clustersize_${default_cluster_size}_${type}.txt"
+figure_file="${file_prefix}_${default_network}_varying_k_density_${default_density}_clustersize_${default_cluster_size}_${type}"
+x_tics=${k_values//,/:}
+if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+    if [[ $edge_type != "t" ]]; then
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+    else
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+    fi
+else
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+fi
+cat $stats_dir/$partition_knn_varying_k_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "6,k,$x_tics,'','',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal maxcols 2,-2"
+
+# # Varying Density Figure
+# temp_file="temp_${file_prefix}_${default_network}_varying_densities_k_${default_k}_clustersize_${default_cluster_size}_${type}.txt"
+# output_file="${file_prefix}_${default_network}_varying_densities_k_${default_k}_clustersize_${default_cluster_size}_${type}.txt"
+# figure_file="${file_prefix}_${default_network}_varying_densities_k_${default_k}_clustersize_${default_cluster_size}_${type}"
+# x_tics=${densities//,/:}
+# if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+#     if [[ $edge_type != "t" ]]; then
+#         plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+#     else
+#         plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+#     fi
+# else
+#     plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+# fi
+# cat $stats_dir/$partition_knn_varying_density_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Densities,$x_tics,'',logscale,''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right top,horizontal maxcols 2,-2"
+
+# # Varying Network Figures
+# if [[ $default_density == "0.001" ]]; then
+#     # We need to sort filtered file so that methods are together (rather than road networks) in original order
+#     temp_file="temp_${file_prefix}_varying_network_density_${default_density}_k_${default_k}_${default_cluster_size}_${type}.txt"
+#     output_file="${file_prefix}_varying_network_density_${default_density}_k_${default_k}_${default_cluster_size}_${type}.txt"
+#     sed -e 's/\tine\t/\t1_ine\t/' -e 's/\troad\t/\t2_road\t/' -e 's/\tgtree\t/\t3_gtree\t/' -e 's/\tier_gtree\t/\t4_ier_gtree\t/' -e 's/\tier_phl\t/\t5_ier_phl\t/' -e 's/\tdist_brws\t/\t6_dist_brws\t/' -e 's/\tdb_rtree\t/\t7_db_rtree\t/' < $stats_dir/$partition_knn_varying_network_stats_file > $fig_data_dir/$temp_file
+#     sort -t $'\t' -k 5,5 -s $fig_data_dir/$temp_file > $fig_data_dir/$output_file
+#     sed -e 's/\t1_ine\t/\tine\t/' -e 's/\t2_road\t/\troad\t/' -e 's/\t3_gtree\t/\tgtree\t/' -e 's/\t4_ier_gtree\t/\tier_gtree\t/' -e 's/\t5_ier_phl\t/\tier_phl\t/' -e 's/\t6_dist_brws\t/\tdist_brws\t/' -e 's/\t7_db_rtree\t/\tdb_rtree\t/ < $fig_data_dir/$output_file > $fig_data_dir/$temp_file
+#     cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+#     rm $fig_data_dir/$temp_file
+#     plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+# #     figure_file="${file_prefix}_varying_network_density_${default_density}_k_${default_k}_clustersize_${default_cluster_size}_${type}"
+# #     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,Road Network,usecol,1,'',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+#     figure_file="${file_prefix}_varying_total_nodes_density_${default_density}_k_${default_k}_clustersize_${default_cluster_size}_${type}"
+#     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "2,Number of Vertices,none,'',logscale,'10^%T'" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# #     figure_file="${file_prefix}_varying_total_edges_density_${default_density}_k_${default_k}_clustersize_${default_cluster_size}_${type}"
+# #     bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "3,Number of Edges,none,'',logscale,'10^%T'" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,vertical,-2"
+# fi
+
+# # Varying Cluster Sizes Figure
+# temp_file="temp_${file_prefix}_${default_network}_varying_clustersizes_k_${default_k}_density_${default_density}_${type}.txt"
+# output_file="${file_prefix}_${default_network}_varying_clustersizes_k_${default_k}_density_${default_density}_${type}.txt"
+# figure_file="${file_prefix}_${default_network}_varying_clustersizes_k_${default_k}_density_${default_density}_${type}"
+# x_tics=${cluster_sizes//,/:}
+# if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+#     if [[ $edge_type != "t" ]]; then
+#         plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+#     else
+#         plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+#     fi
+# else
+#     plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+# fi
+# cat $stats_dir/$partition_knn_varying_clustersizes_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "10,Cluster Sizes,$x_tics,'',logscale,''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "left top,horizontal maxcols 2,-2"
+
+# Varying Number of Clusters Figure
+temp_file="temp_${file_prefix}_${default_network}_varying_clusters_k_${default_k}_clustersize_${default_cluster_size}_${type}.txt"
+output_file="${file_prefix}_${default_network}_varying_clusters_k_${default_k}_clustersize_${default_cluster_size}_${type}.txt"
+figure_file="${file_prefix}_${default_network}_varying_clusters_k_${default_k}_clustersize_${default_cluster_size}_${type}"
+x_tics=${clusters//,/:}
+if [[ $default_network == "DE" || $default_network == "VT" || $default_network == "ME" || $default_network == "COL" || $default_network == "NW" ]]; then
+    if [[ $edge_type != "t" ]]; then
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+    else
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+    fi
+else
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+fi
+cat $stats_dir/$partition_knn_varying_clusters_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Num. of Clusters,$x_tics,'',logscale,''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right top,horizontal maxcols 2,-2"
+

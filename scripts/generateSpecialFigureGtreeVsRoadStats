@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# $1 gtree query stats file over all raod network (border-to-border computations)
+# $2 road query stats file over all road networks (with nodes bypassed)
+# $3 ier_gtree query stats file over all road networks (border-to-border computations)
+# $4 output file (without extension)
+
+gnuplot <<- EOF
+    reset
+    set terminal postscript enhanced eps 32
+    set output '$4.eps'
+
+    set border linewidth 1.5
+    set style line 1 lc rgb 'red' lt 1 lw 4 pt 8 ps 4.5; 
+    set style line 2 lc rgb 'dark-green' lt 1 lw 4 pt 3 ps 4.5; 
+    set style line 3 lc rgb 'black' lt 1 lw 4 pt 12 ps 4.5; 
+
+    unset key
+
+    set logscale x
+    set logscale y
+    set logscale y2
+
+    set xlabel 'Number of Vertices'
+    set ylabel 'Path Cost'
+    set y2label 'Vertices Bypassed'
+    
+    set format x '10^%T'
+    set format y '10^%T'
+    set format y2 '10^%T'
+
+    set ytics nomirror
+    set y2tics
+
+    set autoscale xfix
+
+    set key top left vertical samplen 3 spacing 1 width -5.5 font ',26'
+
+    plot "$1" using 2:13 axis x1y1 title "G-tree Path Cost" with linespoints ls 1, \
+         "$3" using 2:13 axis x1y1 title "IER-Gt Path Cost" with linespoints ls 3, \
+         "$2" using 2:13 axis x1y2 title "ROAD Vert. Bypassed" with linespoints ls 2
+
+EOF
+

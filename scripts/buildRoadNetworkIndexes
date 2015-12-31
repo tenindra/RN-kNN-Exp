@@ -1,0 +1,23 @@
+#!/bin/bash
+
+. globalVariables
+
+# We overwrite global variables here to re-run specific cases
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# index_parameters=("gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$DE_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$VT_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$ME_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$COL_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$NW_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$CAL_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$E_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$W_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$CTR_index_parameters"
+#                   "gtree=0,road=0,silc=0,phl=0,ch=0,tnr=0,alt=0,$USA_index_parameters")
+            
+for i in "${!road_networks[@]}"; do 
+    echo -e "\nBuilding indexes for ${road_networks[$i]}..." 
+    args="-c exp -e indexes -g $idx_dir/${road_networks[$i]}.bin -p ${index_parameters[$i]} -f $output_path -s $stats_dir/$idx_stats_file"
+    #echo "${exe_path}/nd_knn $args"
+    ${exe_path}/nd_knn $args
+done

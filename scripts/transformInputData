@@ -1,0 +1,78 @@
+#!/bin/bash
+
+. globalVariables
+
+# This script processes all files in DIMACS and TPQ directories defined below
+
+dimacs_data_dir="$data_dir/dimacs"
+tpq_data_dir="$data_dir/tpq"
+tpq_cood_infation="1000"
+tpq_edge_infation="1000"
+
+# We assume there is a gr.gz for every co.gz file
+ext="co.gz"
+for node_gz_file in $dimacs_data_dir/*; do
+    if [ "${node_gz_file}" != "${node_gz_file%.${ext}}" ];then
+        if [[ $node_gz_file =~ ((.*)\.co)\.gz$ ]]; then
+            node_file="${BASH_REMATCH[1]}"
+            edge_gz_file="${BASH_REMATCH[2]}.gr.gz"
+            edge_file="${BASH_REMATCH[2]}.gr"
+            if [[ $edge_type == "t" ]]; then
+                edge_file="${BASH_REMATCH[2]//\-d\./-t.}.gr"
+                edge_gz_file="$edge_file.gz"
+            fi
+            #echo $edge_gz_file
+            
+            # Unzip files
+            gunzip -c $node_gz_file > $node_file
+            gunzip -c $edge_gz_file > $edge_file
+            
+            args="-c transform -m dimacs -e $edge_file -n $node_file -o $data_dir"
+            ${exe_path}/nd_knn $args
+            
+            # Remove unzipped files
+            rm $node_file
+            rm $edge_file
+        else 
+            echo "Unexpected DIMACS file name format!"
+            exit 1
+        fi
+    fi
+    #echo $node_gz_file
+done
+
+# We assume directory only has tar.gz files for 
+ext="cnode.gz"
+for node_gz_file in $tpq_data_dir/*; do
+    if [ "${node_gz_file}" != "${node_gz_file%.${ext}}" ];then
+        if [[ $node_gz_file =~ ((.*\/([^\/]+))\.cnode)\.gz$ ]]; then
+            node_file="${BASH_REMATCH[1]}"
+            edge_gz_file="${BASH_REMATCH[2]}.cedge.gz"
+            edge_file="${BASH_REMATCH[2]}.cedge"
+            network="${BASH_REMATCH[3]}"
+            #echo $edge_gz_file
+            #echo $network
+            
+            # Unzip files
+            gunzip -c $node_gz_file > $node_file
+            gunzip -c $edge_gz_file > $edge_file
+            
+            if [[ $network == "cal" ]]; then 
+                args="-c transform -m tpq -e $edge_file -n $node_file -o $data_dir -w 100000 -c 100000"
+            else
+                args="-c transform -m tpq -e $edge_file -n $node_file -o $data_dir -w $tpq_edge_infation -c $tpq_cood_infation"
+            fi
+            ${exe_path}/nd_knn $args
+            
+            # Remove unzipped files
+            rm $node_file
+            rm $edge_file
+            
+            echo ""
+        else 
+            echo "Unexpected TPQ file name format!"
+            exit 1
+        fi
+    fi
+    #echo $node_gz_file
+done

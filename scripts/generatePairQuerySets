@@ -1,0 +1,33 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 is the num pairs, $2 is the road network
+
+road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# sp_parameters=("$DE_index_parameters,verify=0"
+#                "$VT_index_parameters,verify=0"
+#                "$ME_index_parameters,verify=0"
+#                "$COL_index_parameters,verify=0"
+#                "$NW_index_parameters,verify=0"
+#                "$CAL_index_parameters,verify=0"
+#                "$E_index_parameters,verify=0"
+#                "$W_index_parameters,verify=0"
+#                "$CTR_index_parameters,verify=0"
+#                "$USA_index_parameters,verify=0")
+num_pairs="10000"
+
+if [[ $1 != "" ]]; then
+    num_pairs=$1
+fi
+
+if [[ $2 != "" ]]; then
+    road_networks=($2)
+fi
+
+for i in "${!road_networks[@]}"; do 
+    echo -e "\nGenerating query pairs file for ${road_networks[$i]}..." 
+    pts_filename="$(printf "%03d" $num_pairs)"
+    args="-c sample_set -t random_pairs -i $idx_dir/${road_networks[$i]}.bin -o $sets_dir/${road_networks[$i]}_${pts_filename}_random_pairs.txt -n $num_pairs"
+    ${exe_path}/nd_knn $args
+done

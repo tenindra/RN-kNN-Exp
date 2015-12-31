@@ -1,0 +1,30 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 is the num points, $2 determines whether to include/exclude the nodes with $3 degree, $4 is the road network
+
+# We overwrite global variables here to re-run specific cases
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# num_points="25"
+
+if [[ $1 != "" ]]; then
+    num_points=$1
+fi
+
+if [[ $2 != "" &&  $2 != "default" && $3 != "" && $3 != "default" ]]; then
+    degree="-s $2 -e $3"
+else
+    degree="-s ignore" # Include nodes with any degree
+fi
+
+if [[ $4 != "" ]]; then
+    road_networks=($4)
+fi
+
+for i in "${!road_networks[@]}"; do 
+    echo -e "\nGenerating query points file for ${road_networks[$i]}..." 
+    pts_filename="$(printf "%03d" $num_points)"
+    args="-c sample_set -t random -i $idx_dir/${road_networks[$i]}.bin -o $sets_dir/${road_networks[$i]}_$pts_filename.txt -n $num_points $degree"
+    ${exe_path}/nd_knn $args
+done

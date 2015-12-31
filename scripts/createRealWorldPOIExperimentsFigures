@@ -1,0 +1,111 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 comma-separated k in increasing order
+# $2 road_network: default or some other road network
+# $3 comma-separated rw set densities (if not preset)
+# $4 comma-separated default rw set densities (if not preset)
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    k_values=$1
+fi
+
+if [[ $2 != "" && $2 != "default" ]]; then
+    default_network=$2
+fi
+
+rw_sets_arr=("1" "0.1" "0.01" "0.001" "0.0001")
+default_rw_sets_arr=("Hospital" "Fast_Food")
+# default_rw_sets_arr=("0.001")
+
+if [[ $3 != "" ]]; then
+    IFS=',' read -a rw_sets_arr <<< "$3"
+fi
+
+if [[ $4 != "" ]]; then
+    IFS=',' read -a default_rw_sets_arr <<< "$4"
+fi
+
+file_prefix="rw_pois"
+rw_pois_obj_stats_file="${file_prefix}_obj_index_stats.txt"
+rw_pois_knn_varying_sets_stats_file="${file_prefix}_${default_network}_knn_query_varying_sets_stats.txt"
+rw_pois_knn_varying_synthetic_sets_stats_file="${file_prefix}_${default_network}_knn_query_varying_synthetic_sets_stats.txt"
+rw_pois_knn_varying_k_stats_file="${file_prefix}_${default_network}_knn_query_varying_k_stats.txt"
+if [[ ${default_network} == "DE" || ${default_network} == "VT" || ${default_network} == "ME" || ${default_network} == "COL" || ${default_network} == "NW" ]]; then
+    if [[ $edge_type != "t" ]]; then
+        include_disbrw="yes"
+        include_phl="yes"
+        header_row="Set\tINE\tROAD\tGtree\tIER-Gt\tIER-PHL\tDisBrw"
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2,DisBrw;dark-red;4"
+    else
+        include_disbrw="no"
+        include_phl="yes"
+        header_row="Set\tINE\tROAD\tGtree\tIER-Gt\tIER-PHL"
+        plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+    fi
+elif [[ $edge_type != "t" && $default_network == "USA" ]]; then
+    include_disbrw="no"
+    include_phl="no"
+    header_row="Set\tINE\tROAD\tGtree\tIER-Gt"
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12"  
+else
+    include_disbrw="no"
+    include_phl="yes"
+    header_row="Set\tINE\tROAD\tGtree\tIER-Gt\tIER-PHL"
+    plot_lines="INE;blue;6,ROAD;dark-green;3,Gtree;red;8,IER-Gt;black;12,IER-PHL;dark-magenta;2"
+fi
+
+# Experiment 1 Figure
+output_file="${file_prefix}_${default_network}_varying_sets.txt"
+figure_file="${file_prefix}_${default_network}_varying_sets"
+
+# Bar Histogram
+pois=()
+declare -A lines
+while IFS=$'\t' read -r -a columns; do
+    poi=${columns[7]}
+    if ! [ ${lines[$poi]+abc} ]; then
+        pois+=($poi)
+        display_poi=$poi
+        display_poi=${display_poi//_/ }
+        lines[$poi]="\"$display_poi\""
+    fi 
+    decimal_time=${columns[6]}
+#     lines[$poi]="${lines[$poi]}\t$decimal_time"
+    lines[$poi]="${lines[$poi]}\t${decimal_time%.*}"
+done < $stats_dir/$rw_pois_knn_varying_sets_stats_file
+
+> $fig_data_dir/$output_file
+echo -e $header_row >> $fig_data_dir/$output_file
+for i in "${!pois[@]}"; do 
+    echo -e ${lines[${pois[$i]}]} >> $fig_data_dir/$output_file
+done
+
+bash generateSpecialFigureRWPOIs $fig_dir/$figure_file $fig_data_dir/$output_file $include_disbrw $include_phl
+
+# # Line Graphs with Set Name X-Values
+# # Note: To make this look good on xtics, changes size of terminal e.g. by manually changing it to
+# # something like set terminal postscript enhanced eps 32 size 7.5,3.5 (the default is 5 x 3.5 inches)
+# cat $stats_dir/$rw_pois_knn_varying_sets_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+# x_tics=$(IFS=':'; echo "${rw_sets_arr[*]}") # Join array delimited by comma
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "0,POI Set,usecol,8,'',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "left top,horizontal,-2"
+
+# # Line Graphs with Density X-Values
+# cat $stats_dir/$rw_pois_knn_varying_sets_stats_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+# x_tics=$(IFS=':'; echo "${rw_sets_arr[*]}") # Join array delimited by comma
+# bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "8,Density,$x_tics,'',logscale,''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "left bottom,horizontal,-2"
+
+
+# Experiment 2 Figures
+x_tics=$(IFS=':'; echo "${k_values_arr[*]}") # Join array delimited by comma
+for i in "${!default_rw_sets_arr[@]}"; do 
+    temp_file="temp_${file_prefix}_${default_network}_${default_rw_sets_arr[$i]}_varying_k.txt"
+    output_file="${file_prefix}_${default_network}_${default_rw_sets_arr[$i]}_varying_k.txt"
+    figure_file="${file_prefix}_${default_network}_${default_rw_sets_arr[$i]}_varying_k"
+    
+    cat $stats_dir/$rw_pois_knn_varying_k_stats_file | bash filterStatsRows 8 ${default_rw_sets_arr[$i]} > $fig_data_dir/$temp_file
+    cat $fig_data_dir/$temp_file | bash splitStatsRows 5 > $fig_data_dir/$output_file # Insert two newlines between methods
+    rm $fig_data_dir/$temp_file
+    bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "6,k,$x_tics,'','',''" "7,Query Time ({/Symbol m}s),logscale,'10^%T'" "$plot_lines" "right bottom,horizontal maxcols 2,-2"
+done

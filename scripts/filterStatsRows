@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# $1 is column number (starting from 1)
+# $2 is matching column value
+
+# Usage: cat ~/Downloads/stats/knn_query_stats.txt | bash filterStatsRows 1 CAL | bash filterStatsRows 5 road  | bash filterStatsRows 6 10 | bash filterStatsRows 8 random | bash filterStatsRows 9 0.0100 > ~/Downloads/test.txt
+
+IFS=$'\t'
+
+while read line; do
+    array=(${line})
+    column=${array[$(($1-1))]}
+    [[ $column == $2 || $line == "" ]] && echo "$line"
+done

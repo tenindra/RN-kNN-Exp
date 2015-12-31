@@ -1,0 +1,167 @@
+#!/bin/bash
+
+# $1 output file (without extension)
+# $2 data file (with header line)
+# $3 include DisBrw (default no)
+# $4 include IER-PHL (default yes)
+
+# Note: Both can be yes, both can be no, or DisBrw can be no while IER-PHL can be yes, but DisBrw cannot be yes while IER-PHL is no
+
+if [[ $3 != "yes" && $4 != "yes" ]]; then
+
+data_file=$2
+fig_script_file="${data_file%.*}.gp"
+
+cat > $fig_script_file <<- EOM
+    reset
+    set terminal pdf enhanced size 9.5,3.5 font ',22'
+    set output '$1.pdf'
+
+    set style data histogram
+    set style histogram cluster gap 1
+
+    set style fill solid border rgb "black"
+    set auto x
+
+    set ylabel 'Query Time ({/Symbol m}s)'
+    set logscale y
+    set format y '10^{%T}'
+    
+    set xtics nomirror font ',18,'
+    
+    set grid ytics
+    
+    set key right top vertical maxrows 4
+
+#     plot '$2' using 2:xtic(1) title col lc rgb 'blue', \
+#            '' using 3:xtic(1) title col lc rgb 'dark-green', \
+#            '' using 4:xtic(1) title col lc rgb 'red', \
+#            '' using 5:xtic(1) title col lc rgb 'black' \
+#            '' using 6:xtic(1) title col lc rgb 'dark-magenta'
+
+    GAPSIZE=1
+    STARTCOL=2
+    ENDCOL=5
+    NCOL=ENDCOL-STARTCOL+1
+    BOXWIDTH=1./(GAPSIZE+NCOL)
+
+    plot '$2' using 2:xtic(1) title col lc rgb 'blue' fs pattern 1, \
+           '' u (column(0)-1+BOXWIDTH*(2-STARTCOL+GAPSIZE/2+1)-0.5):2:2 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 3:xtic(1) title col lc rgb 'dark-green' fs pattern 2, \
+           '' u (column(0)-1+BOXWIDTH*(3-STARTCOL+GAPSIZE/2+1)-0.5):3:3 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 4:xtic(1) title col lc rgb 'red' fs pattern 3, \
+           '' u (column(0)-1+BOXWIDTH*(4-STARTCOL+GAPSIZE/2+1)-0.5):4:4 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 5:xtic(1) title col lc rgb 'black' fs pattern 4, \
+           '' u (column(0)-1+BOXWIDTH*(5-STARTCOL+GAPSIZE/2+1)-0.5):5:5 notitle w labels font ',13' rotate left offset 0,0.2
+EOM
+
+gnuplot $fig_script_file # 2>/dev/null
+
+elif [[ $3 != "yes" && $4 == "yes" ]]; then
+
+data_file=$2
+fig_script_file="${data_file%.*}.gp"
+
+cat > $fig_script_file <<- EOM
+    reset
+    set terminal pdf enhanced size 9.5,3.5 font ',22'
+    set output '$1.pdf'
+
+    set style data histogram
+    set style histogram cluster gap 1
+
+    set style fill solid border rgb "black"
+    set auto x
+
+    set ylabel 'Query Time ({/Symbol m}s)'
+    set logscale y
+    set format y '10^{%T}'
+    
+    set xtics nomirror font ',18,'
+    
+    set grid ytics
+    
+    set key right top vertical maxrows 3
+
+#     plot '$2' using 2:xtic(1) title col lc rgb 'blue', \
+#            '' using 3:xtic(1) title col lc rgb 'dark-green', \
+#            '' using 4:xtic(1) title col lc rgb 'red', \
+#            '' using 5:xtic(1) title col lc rgb 'black' \
+#            '' using 6:xtic(1) title col lc rgb 'dark-magenta'
+           
+    GAPSIZE=1
+    STARTCOL=2
+    ENDCOL=6
+    NCOL=ENDCOL-STARTCOL+1
+    BOXWIDTH=1./(GAPSIZE+NCOL)
+
+    plot '$2' using 2:xtic(1) title col lc rgb 'blue' fs pattern 1, \
+           '' u (column(0)-1+BOXWIDTH*(2-STARTCOL+GAPSIZE/2+1)-0.5):2:2 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 3:xtic(1) title col lc rgb 'dark-green' fs pattern 2, \
+           '' u (column(0)-1+BOXWIDTH*(3-STARTCOL+GAPSIZE/2+1)-0.5):3:3 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 4:xtic(1) title col lc rgb 'red' fs pattern 3, \
+           '' u (column(0)-1+BOXWIDTH*(4-STARTCOL+GAPSIZE/2+1)-0.5):4:4 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 5:xtic(1) title col lc rgb 'black' fs pattern 4, \
+           '' u (column(0)-1+BOXWIDTH*(5-STARTCOL+GAPSIZE/2+1)-0.5):5:5 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 6:xtic(1) title col lc rgb 'dark-magenta' fs pattern 7, \
+           '' u (column(0)-1+BOXWIDTH*(6-STARTCOL+GAPSIZE/2+1)-0.5):6:6 notitle w labels font ',13' rotate left offset 0,0.2  
+EOM
+
+gnuplot $fig_script_file # 2>/dev/null
+
+elif [[ $3 == "yes" && $4 == "yes" ]]; then
+
+data_file=$2
+fig_script_file="${data_file%.*}.gp"
+
+cat > $fig_script_file <<- EOM
+    reset
+    set terminal pdf enhanced size 9.5,3.5 font ',22'
+    set output '$1.pdf'
+
+    set style data histogram
+    set style histogram cluster gap 1
+
+    set style fill solid border rgb "black"
+    set auto x
+
+    set ylabel 'Query Time ({/Symbol m}s)'
+    set logscale y
+    set format y '10^{%T}'
+    
+    set xtics nomirror font ',18,'
+    
+    set grid ytics
+    
+    set key right top vertical maxrows 3
+
+#     plot '$2' using 2:xtic(1) title col lc rgb 'blue', \
+#            '' using 3:xtic(1) title col lc rgb 'dark-red', \
+#            '' using 4:xtic(1) title col lc rgb 'dark-green', \
+#            '' using 5:xtic(1) title col lc rgb 'red', \
+#            '' using 6:xtic(1) title col lc rgb 'black' \
+#            '' using 7:xtic(1) title col lc rgb 'dark-magenta'
+           
+    GAPSIZE=1
+    STARTCOL=2
+    ENDCOL=7
+    NCOL=ENDCOL-STARTCOL+1
+    BOXWIDTH=1./(GAPSIZE+NCOL)
+
+    plot '$2' using 2:xtic(1) title col lc rgb 'blue' fs pattern 1, \
+           '' u (column(0)-1+BOXWIDTH*(2-STARTCOL+GAPSIZE/2+1)-0.5):2:2 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 3:xtic(1) title col lc rgb 'dark-green' fs pattern 2, \
+           '' u (column(0)-1+BOXWIDTH*(3-STARTCOL+GAPSIZE/2+1)-0.5):3:3 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 4:xtic(1) title col lc rgb 'red' fs pattern 3, \
+           '' u (column(0)-1+BOXWIDTH*(4-STARTCOL+GAPSIZE/2+1)-0.5):4:4 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 5:xtic(1) title col lc rgb 'black' fs pattern 4, \
+           '' u (column(0)-1+BOXWIDTH*(5-STARTCOL+GAPSIZE/2+1)-0.5):5:5 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 6:xtic(1) title col lc rgb 'dark-magenta' fs pattern 7, \
+           '' u (column(0)-1+BOXWIDTH*(6-STARTCOL+GAPSIZE/2+1)-0.5):6:6 notitle w labels font ',13' rotate left offset 0,0.2, \
+           '' using 7:xtic(1) title col lc rgb 'dark-red' fs pattern 6, \
+           '' u (column(0)-1+BOXWIDTH*(7-STARTCOL+GAPSIZE/2+1)-0.5):7:7 notitle w labels font ',13' rotate left offset 0,0.2   
+EOM
+
+gnuplot $fig_script_file # 2>/dev/null
+
+fi

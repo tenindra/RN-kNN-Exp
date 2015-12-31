@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# $1 is the method
+# $2 is the executable name
+# $3 is the output stats file
+# $4 special parameters to add to kNN stats tuple (comma-separated) or "none" to ignore, 
+# $5 Optional single non-default road network to be tested (or "all" to test all networks or "default" to ignore)
+# $6 Optional knn parameters to use (or "default" to ignore)
+# $7 Optional single non-default k to be tested (or "default" to ignore)
+# $8 Optional single non-default density to be tested (or "default" to ignore)
+# $9 Optional number of points to test (or "default" to ignore)
+# $10 Optional number of sets to test (or "default" to ignore)
+
+# Note: "default" in the case of k and density means we use all original values, not the single default values
+
+. globalVariables
+
+# Concatenate special parameters to pass to program
+special_knn_parameters=""
+if [[ $4 != "none" ]]; then
+    IFS=',' read -a special_fields <<< "$4"
+    for i in "${!special_fields[@]}"
+    do
+        if [[ $i != 0 ]]; then
+            special_knn_parameters="$special_knn_parameters,"
+        fi
+        special_knn_parameters="${special_knn_parameters}special_field_$i=${special_fields[$i]}"
+    done
+fi
+# echo $special_knn_parameters
+
+# We overwrite global variables here to re-run specific cases
+# road_networks=("DE" "VT" "ME" "COL" "NW" "CAL" "E" "W" "CTR" "USA")
+# knn_parameters=("$DE_index_parameters,$DE_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$VT_index_parameters,$VT_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$ME_index_parameters,$ME_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$COL_index_parameters,$COL_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$NW_index_parameters,$NW_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$CAL_index_parameters,$CAL_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$E_index_parameters,$E_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$W_index_parameters,$W_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$CTR_index_parameters,$CTR_obj_index_parameters,$default_verification,$special_knn_parameters"
+#                 "$USA_index_parameters,$USA_obj_index_parameters,$default_verification,$special_knn_parameters")
+# densities="1,0.1,0.01,0.001,0.0001"
+# types="random,uniform"
+# num_sets="50"
+# num_points="50"
+# k_values="1,5,10,25,50"
+# default_k="10"
+# default_density="0.01"
+# default_type="random"
+# default_network="NW"
+# default_parameters="$NW_index_parameters,$NW_obj_index_parameters"
+# default_verification="verify=1"
+
+if [[ $5 != "" && $5 != "default" ]]; then
+    if [[ $5 != "all" ]]; then
+        road_networks=($5)
+        index_parameters="${5}_index_parameters"
+        obj_index_parameters="${5}_obj_index_parameters"
+        knn_parameters=("${!index_parameters},${!obj_index_parameters},$default_verification,$special_knn_parameters")
+    else
+        for i in "${!road_networks[@]}"; do 
+            knn_parameters[$i]="${knn_parameters[$i]},$special_knn_parameters"
+        done
+    fi
+else
+    road_networks=($default_network)
+    knn_parameters=("$default_parameters,$default_verification,$special_knn_parameters")
+fi
+
+if [[ $6 != "" && $6 != "default" ]]; then
+    if [[ $5 == "all" ]]; then
+        echo "Cannot specify knn parameter when road network argument is \"all\""
+        exit 1
+    fi
+    knn_parameters=($6)
+fi
+
+if [[ $7 != "" && $7 != "default" ]]; then
+    k_values=$7
+fi
+
+if [[ $8 != "" && $8 != "default" ]]; then
+    densities=$8
+fi
+
+if [[ $9 != "" && $9 != "default" ]]; then
+    num_points=$9
+fi
+
+if [[ ${10} != "" && ${10} != "default" ]]; then
+    num_sets=${10}
+fi
+
+for i in "${!road_networks[@]}"; do 
+    echo -e "\nRun kNN queries for ${road_networks[$i]}..."
+    pts_filename="$(printf "%03d" $num_points)"
+    args="-c exp -e knn_special -m $1 -g $idx_dir/${road_networks[$i]}.bin -q $sets_dir/${road_networks[$i]}_$pts_filename.txt -k $k_values -n $num_sets -d $densities -t $default_type -v $ignore_variable -p ${knn_parameters[$i]} -f $output_path -s $stats_dir/$3"
+    ${exe_path}/$2 $args
+done

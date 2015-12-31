@@ -1,0 +1,266 @@
+#!/bin/bash
+
+. globalVariables
+
+# Specific Experiments
+
+echo -e "\nIER Shortest Path Methods"
+
+# Figure 4a
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment ier_dijk $main_program $exp_stats_file ier_dijk default default default $default_density
+bash runSingleKnnExperiment ier_gtree $main_program $exp_stats_file ier_gtree_w_mat default default default $default_density
+bash runSingleKnnExperiment ier_phl $main_program $exp_stats_file ier_phl default default default $default_density
+bash runSingleKnnExperiment ier_tnr $main_program $exp_stats_file ier_tnr default default default $default_density
+bash runSingleKnnExperiment ier_ch $main_program $exp_stats_file ier_ch default default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Dijk;navy;1,MGtree;black;12,PHL;dark-magenta;2,TNR;dark-orange;6,CH;dark-green;3" default default "right bottom,horizontal maxcols 2,-2" default $default_density_string
+
+# Figure 4b
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment ier_dijk $main_program $exp_stats_file ier_dijk default default $default_k default
+bash runSingleKnnExperiment ier_gtree $main_program $exp_stats_file ier_gtree_w_mat default default $default_k default
+bash runSingleKnnExperiment ier_phl $main_program $exp_stats_file ier_phl default default $default_k default
+bash runSingleKnnExperiment ier_tnr $main_program $exp_stats_file ier_tnr default default $default_k default
+bash runSingleKnnExperiment ier_ch $main_program $exp_stats_file ier_ch default default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Dijk;navy;1,MGtree;black;12,PHL;dark-magenta;2,TNR;dark-orange;6,CH;dark-green;3" default default "right top,horizontal maxcols 2,-2" $default_k default
+
+
+echo -e "\nDisBrw Improvements"
+
+# DB-ENN Optimisation
+
+# Figure
+exp_prefix="silc_dbenn"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment opt_db $main_program $exp_stats_file dist_brws default default default $default_density
+bash runSingleKnnExperiment db_rtree $main_program $exp_stats_file db_enn default default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "DisBrw;dark-red;4,DB-ENN;black;12" default default "left top,vertical,-1" default $default_density_string
+
+# Figure 
+exp_prefix="silc_dbenn"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment opt_db $main_program $exp_stats_file dist_brws default default $default_k default
+bash runSingleKnnExperiment db_rtree $main_program $exp_stats_file db_enn default default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "DisBrw;dark-red;4,DB-ENN;black;12" default default "left bottom,vertical,-1" $default_k default
+
+
+# Optimisation on Non-Highway Dataset
+
+# Figure 6a (uses linear scale for y - query time)
+exp_prefix="silc_opt"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment db_rtree nd_knn_no_chain_skip $exp_stats_file db_enn_nochain default default default $default_density
+bash runSingleKnnExperiment db_rtree $main_program $exp_stats_file db_enn_chainopt default default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "DisBrw;dark-red;4,OptDisBrw;dark-magenta:3" default "7,Query Time ({/Symbol m}s),'',''" "left top,vertical,-3" default $default_density_string
+
+# Figure 6b (uses linear scale for y - query time)
+exp_prefix="silc_opt"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment db_rtree nd_knn_no_chain_skip $exp_stats_file db_enn_nochain default default $default_k default
+bash runSingleKnnExperiment db_rtree $main_program $exp_stats_file db_enn_chainopt default default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "DisBrw;dark-red;4,OptDisBrw;dark-magenta:3" default "7,Query Time ({/Symbol m}s),'',''" "right top,vertical,-3" $default_k default
+
+
+# Optimisation on Highway Datasets
+
+# Build the SILC index and object indexes for the highway index if it doesn't already exist
+if [ ! -f $idx_dir/NA.silc ]; then
+    echo -e "\nBuilding Graph, SILC Index, and Object Set Quadtrees for Highway Dataset" 
+    edge_file="NA-d.graph"
+    node_file="NA-d.coordinates"
+    args="-c graph -e $data_dir/$edge_file -n $data_dir/$node_file -o $idx_dir/NA.bin -s $stats_dir/temp_index_stats.txt"
+    ${exe_path}/nd_knn $args
+    args="-c idx -i silc -b $idx_dir/NA.bin -l 1000 -o $idx_dir/NA.silc -q 1000 -s $stats_dir/temp_index_stats.txt"
+    ${exe_path}/nd_knn $args
+fi
+
+# Since this is not one of the default road networks, need to generate query point set
+# Also query and object sets may have been cleared since this was last run (but NA.silc might still exist)
+echo -e "\nBuilding Query and Object Sets for Highway Dataset" 
+args="-c exp -e objects -g $idx_dir/NA.bin -n $num_sets -d $densities -t $default_type -v $ignore_variable -p obj_sets=1,occ_list=0,assoc_dir=0,quadtree=1,rtree=1,$NA_index_parameters,$NA_obj_index_parameters -f $output_path -s $stats_dir/temp_index_stats.txt"
+${exe_path}/nd_knn $args
+bash generateQuerySets $num_points default default NA
+
+# Figure 5a (on highway dataset NA)
+exp_prefix="silc_opt_hwy_na"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment db_rtree nd_knn_no_chain_skip $exp_stats_file db_enn_nochain NA default default $default_density
+bash runSingleKnnExperiment db_rtree $main_program $exp_stats_file db_enn_chainopt NA default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "DisBrw;dark-red;4,OptDisBrw;dark-magenta:3" NA default "right bottom,vertical,-3" default $default_density_string
+
+# Figure 5b (on highway dataset NA)
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment db_rtree nd_knn_no_chain_skip $exp_stats_file db_enn_nochain NA default $default_k default
+bash runSingleKnnExperiment db_rtree $main_program $exp_stats_file db_enn_chainopt NA default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "DisBrw;dark-red;4,OptDisBrw;dark-magenta:3" NA default "right top,vertical,-3" $default_k default
+
+
+echo -e "\nG-tree Leaf Search Improvement"
+
+# Figure 7a
+exp_prefix="gtree_leaf_search_opt_multik"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment gtree nd_knn_gtree_leaf_unoptimised $exp_stats_file unopt_k1 default default 1 default
+bash runSingleKnnExperiment gtree $main_program $exp_stats_file opt_k1 default default 1 default
+bash runSingleKnnExperiment gtree nd_knn_gtree_leaf_unoptimised $exp_stats_file unopt_k10 default default 10 default
+bash runSingleKnnExperiment gtree $main_program $exp_stats_file opt_k10 default default 10 default
+
+output_file="${exp_prefix}_${default_network}_varying_density_${default_type}.txt"
+figure_file="${exp_prefix}_${default_network}_varying_density_${default_type}"
+cat $stats_dir/$exp_stats_file | bash splitStatsRows $1 > $fig_data_dir/$output_file # Insert two newlines between methods
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Density,$x_tics,'',logscale,''" \
+"7,Query Time ({/Symbol m}s),logscale,'10^%T'" "k=1 (Bef);blue;2,k=1 (Aft);red;12,k=10 (Bef);black;10,k=10 (Aft);dark-orange;4" "right top,horizontal,-3"
+
+# Figure 7b
+exp_prefix="gtree_leaf_search_opt_usa_multik"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment gtree nd_knn_gtree_leaf_unoptimised $exp_stats_file unopt_k1 USA default 1 default
+bash runSingleKnnExperiment gtree $main_program $exp_stats_file opt_k1 USA default 1 default
+bash runSingleKnnExperiment gtree nd_knn_gtree_leaf_unoptimised $exp_stats_file unopt_k10 USA default 10 default
+bash runSingleKnnExperiment gtree $main_program $exp_stats_file opt_k10 USA default 10 default
+
+output_file="${exp_prefix}_USA_varying_density_${default_type}.txt"
+figure_file="${exp_prefix}_USA_varying_density_${default_type}"
+cat $stats_dir/$exp_stats_file | bash splitStatsRows $1 > $fig_data_dir/$output_file # Insert two newlines between methods
+bash generateFigure $fig_dir/$figure_file $fig_data_dir/$output_file "9,Density,$x_tics,'',logscale,''" \
+"7,Query Time ({/Symbol m}s),logscale,'10^%T'" "k=1 (Bef);blue;2,k=1 (Aft);red;12,k=10 (Bef);black;10,k=10 (Aft);dark-orange;4" "right top,horizontal,-3"
+
+
+echo -e "\nG-tree Distance Matrix Implementations"
+
+# Figure 8a
+exp_prefix="gtree_dist_matrix_versions"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment gtree nd_knn_gtree_stl_hashtable_dist_matrix $exp_stats_file chain_hashing default default default $default_density
+bash runSingleKnnExperiment gtree nd_knn_gtree_google_densehash_dist_matrix $exp_stats_file quadractic_prob default default default $default_density
+bash runSingleKnnExperiment gtree $main_program $exp_stats_file array default default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Chained Hashing;navy;1,Quad. Probing;dark-green;10,Array;red;8" default default "right bottom,vertical,-3" default $default_density_string
+
+# Figure 8b
+exp_prefix="gtree_dist_matrix_versions"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment gtree nd_knn_gtree_stl_hashtable_dist_matrix $exp_stats_file chain_hashing default default $default_k default
+bash runSingleKnnExperiment gtree nd_knn_gtree_google_densehash_dist_matrix $exp_stats_file quadractic_prob default default $default_k default
+bash runSingleKnnExperiment gtree $main_program $exp_stats_file array default default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Chained Hashing;navy;1,Quad. Probing;dark-green;10,Array;red;8" default default "right top,vertical,-3" $default_k default
+
+
+echo -e "\nG-tree Path Cost vs Road Nodes Bypassed"
+
+# Figure 13b
+
+exp_prefix="road_stats"
+exp_stats_file="$exp_prefix.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment road nd_knn_stats $exp_stats_file none all default $default_k $default_density
+
+temp_exp_stats_file="temp_$exp_prefix.txt"
+cat $stats_dir/$exp_stats_file | bash extractColumnAndAppend 4 "nodes_bypassed=([[:digit:]]+)" > $stats_dir/$temp_exp_stats_file # Column 13 - Nodes Bypassed
+# cat $stats_dir/$temp_exp_stats_file | bash extractColumnAndAppend 4 "rnets_bypassed=([[:digit:]]+)" > $stats_dir/$exp_stats_file # Column 14 - Rnets Bypassed
+# cat $stats_dir/$exp_stats_file | bash extractColumnAndAppend 4 "rnets_evaluated=([[:digit:]]+)" > $stats_dir/$temp_exp_stats_file # Column 15 - Rnets Evaluated
+cat $stats_dir/$temp_exp_stats_file > $stats_dir/$exp_stats_file
+rm $stats_dir/$temp_exp_stats_file
+
+exp_prefix2="gtree_stats"
+exp_stats_file2="$exp_prefix2.txt"
+> $stats_dir/$exp_stats_file2 # Truncate file
+bash runSingleKnnExperiment gtree nd_knn_stats $exp_stats_file2 none all default $default_k $default_density
+
+temp_exp_stats_file="temp_$exp_prefix2.txt"
+cat $stats_dir/$exp_stats_file2 | bash extractColumnAndAppend 4 "computations_executed=([[:digit:]]+)" > $stats_dir/$temp_exp_stats_file # Column 13 - Computation Executed
+cat $stats_dir/$temp_exp_stats_file > $stats_dir/$exp_stats_file2
+rm $stats_dir/$temp_exp_stats_file
+
+exp_prefix3="ier_gtree_stats"
+exp_stats_file3="$exp_prefix3.txt"
+> $stats_dir/$exp_stats_file3 # Truncate file
+bash runSingleKnnExperiment ier_gtree nd_knn_stats $exp_stats_file3 none all default $default_k $default_density
+
+temp_exp_stats_file="temp_$exp_prefix3.txt"
+cat $stats_dir/$exp_stats_file3 | bash extractColumnAndAppend 4 "computations_executed=([[:digit:]]+)" > $stats_dir/$temp_exp_stats_file # Column 13 - Computation Executed
+cat $stats_dir/$temp_exp_stats_file > $stats_dir/$exp_stats_file3
+rm $stats_dir/$temp_exp_stats_file
+
+figure_file="gtree_path_cost_vs_road_nodes_bypassed_varying_total_nodes"
+bash generateSpecialFigureGtreeVsRoadStats $stats_dir/$exp_stats_file2 $stats_dir/$exp_stats_file $stats_dir/$exp_stats_file3 $fig_dir/$figure_file
+
+
+echo -e "\nProgressive INE Improvement"
+
+bash buildBinaryGraphs $default_network build_dyn # Build slow version of graph to run experiments on
+
+# Figure 
+exp_prefix="ine_improvements"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment bad_ine $main_program $exp_stats_file first_cut default default default $default_density
+bash runSingleKnnExperiment bad_ine nd_knn_ine_queue_opt $exp_stats_file queue_opt default default default $default_density
+bash runSingleKnnExperiment bad_ine nd_knn_ine_visited_opt $exp_stats_file visited_opt default default default $default_density
+bash runSingleKnnExperiment ine $main_program $exp_stats_file graph_opt default default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "1st Cut;dark-magenta;1,PQueue;dark-green;10,Settled;red:3,Graph;blue;6" default default "right bottom,horizontal maxcols 2,-2" default $default_density_string
+
+# Figure 
+exp_prefix="ine_improvements"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment bad_ine $main_program $exp_stats_file first_cut default default $default_k default
+bash runSingleKnnExperiment bad_ine nd_knn_ine_queue_opt $exp_stats_file queue_opt default default $default_k default
+bash runSingleKnnExperiment bad_ine nd_knn_ine_visited_opt $exp_stats_file visited_opt default default $default_k default
+bash runSingleKnnExperiment ine $main_program $exp_stats_file graph_opt default default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "1st Cut;dark-magenta;1,PQueue;dark-green;10,Settled;red:3,Graph;blue;6" default default "right top,vertical maxrows 2,-2" $default_k default
+
+
+# Default Experiments
+
+# Figure 10, 16
+bash createIndexExperimentsFigures
+
+# Figure 11a, 12a, 13a
+echo -e "\nDefault Experiments: NW, k=10, d=0.001"
+bash runDefaultKnnExperiments 10 0.00100 NW
+
+# Figure 9
+echo -e "\nDefault Experiments: COL, k=10, d=0.01"
+bash runDefaultKnnExperiments 10 0.01000 COL density
+
+# Figure 11b, 12b
+echo -e "\nDefault Experiments: USA, k=10, d=0.001"
+bash runDefaultKnnExperiments 10 0.00100 USA network # Don't run network (run in a previous command)
+
+
+# Minimum Object Distance Object Sets
+
+# Figure 
+echo -e "\nRange Distance Experiments: NW, k=10, d=0.001, m=6"
+bash runMinMaxDistObjectsExperiments min_nd 0.001 "1,2,3,4,5,6" 3 NW;
+
+# Figure 
+echo -e "\nRange Distance Experiments: USA, k=10, d=0.001, m=8"
+bash runMinMaxDistObjectsExperiments min_nd 0.001 "1,2,3,4,5,6,7,8" 4 USA;
+
+
+# Clustered Object Sets
+
+# Figure 
+echo -e "\nClustered Experiments: NW, k=10, d=0.001, |C|=5,"
+bash runClusteredObjectsExperiments 0.001 "0.1,0.01,0.001,0.0001" 5 "5,10,25,50,100" NW;
+
+
+# Real-World Object Sets
+
+bash runRealWorldPOIExperiments default NW;
+bash runRealWorldPOIExperiments default USA;

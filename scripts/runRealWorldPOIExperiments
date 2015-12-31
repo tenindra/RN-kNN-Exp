@@ -1,0 +1,71 @@
+#!/bin/bash
+
+. globalVariables
+
+# $1 comma-separated k in increasing order
+# $2 road_network: default or some other road network
+
+rw_poi_num_points=$(($num_sets*$num_points))
+all_poi_sets_file="all_poi_sets.txt"
+synthetic_poi_sets_file="synthetic_poi_sets.txt"
+default_poi_sets_file="default_poi_sets.txt"
+
+if [[ $1 != "" && $1 != "default" ]]; then
+    default_k=$1
+fi
+
+if [[ $2 != "" && $2 != "default" ]]; then
+    default_network=$2
+    index_parameters="${2}_index_parameters"
+    obj_index_parameters="${2}_obj_index_parameters"
+    knn_methods="${2}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+    default_all_poi_sets_file="$rw_poi_dir/${2}_$all_poi_sets_file"
+    default_default_poi_sets_file="$rw_poi_dir/${2}_$default_poi_sets_file"
+    default_synthetic_poi_sets_file="$rw_poi_dir/${2}_$synthetic_poi_sets_file"
+else
+    index_parameters="${default_network}_index_parameters"
+    obj_index_parameters="${default_network}_obj_index_parameters"
+    knn_methods="${default_network}_knn_methods"
+    default_parameters="${!knn_methods},${!index_parameters},${!obj_index_parameters}"
+    default_knn_parameters="$default_parameters,$default_verification"
+    default_obj_parameters="$default_obj_idxs,$default_parameters"
+    default_all_poi_sets_file="$rw_poi_dir/${default_network}_$all_poi_sets_file"
+    default_default_poi_sets_file="$rw_poi_dir/${default_network}_$default_poi_sets_file"
+    default_synthetic_poi_sets_file="$rw_poi_dir/${default_network}_$synthetic_poi_sets_file"
+fi
+
+file_prefix="rw_pois"
+rw_pois_obj_stats_file="${file_prefix}_obj_index_stats.txt"
+rw_pois_knn_varying_sets_stats_file="${file_prefix}_${default_network}_knn_query_varying_sets_stats.txt"
+rw_pois_knn_varying_synthetic_sets_stats_file="${file_prefix}_${default_network}_knn_query_varying_synthetic_sets_stats.txt"
+rw_pois_knn_varying_k_stats_file="${file_prefix}_${default_network}_knn_query_varying_k_stats.txt"
+
+> $stats_dir/$rw_pois_obj_stats_file # Truncate file
+> $stats_dir/$rw_pois_knn_varying_sets_stats_file # Truncate file
+> $stats_dir/$rw_pois_knn_varying_synthetic_sets_stats_file # Truncate file
+> $stats_dir/$rw_pois_knn_varying_k_stats_file # Truncate file
+
+# Create query sets for real-world POIs
+bash generateQuerySets $rw_poi_num_points default default $default_network
+
+# Create object indexes for querying
+echo -e "\nBuilding object indexes for ${default_network} road network real-world POI sets..." 
+args="-c exp -e rw_poi -g $idx_dir/${default_network}.bin -r $default_all_poi_sets_file -p $default_obj_parameters -f $output_path -s $stats_dir/$rw_pois_obj_stats_file"
+${exe_path}/nd_knn $args
+
+# Run kNN queries for on default parameters with varying k
+echo -e "\nExperiment 1: Varying all POI sets"
+pts_filename="$(printf "%03d" $rw_poi_num_points)"
+args="-c exp -e knn_rw_poi -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $default_k -r $default_all_poi_sets_file -p $default_knn_parameters -f $output_path -s $stats_dir/$rw_pois_knn_varying_sets_stats_file"
+${exe_path}/nd_knn $args
+
+# Run kNN queries for on default parameters with varying k
+echo -e "\nExperiment 2: Varying k for default POI sets"
+pts_filename="$(printf "%03d" $rw_poi_num_points)"
+args="-c exp -e knn_rw_poi -g $idx_dir/$default_network.bin -q $sets_dir/${default_network}_$pts_filename.txt -k $k_values -r $default_default_poi_sets_file -p $default_knn_parameters -f $output_path -s $stats_dir/$rw_pois_knn_varying_k_stats_file"
+${exe_path}/nd_knn $args
+
+bash createRealWorldPOIExperimentsFigures $1 $2

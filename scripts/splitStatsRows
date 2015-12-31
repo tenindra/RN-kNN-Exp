@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Arg $1 is the column index (i.e. starting from 0) to check for splitting
+
+IFS=$'\t'
+prev="";
+while read line; do
+    array=(${line})
+    current=${array[$(($1-1))]}
+    # If we find that the column has change we add two lines to separate them for gnuplot
+    if [[ $prev != $current && $prev != "" ]]; then
+        echo -e "\n"
+    fi
+    echo "$line"
+    prev=$current
+done

@@ -1,0 +1,78 @@
+#!/bin/bash
+
+. globalVariables
+
+# Specific Experiments
+
+echo -e "\nIER Shortest Path Methods"
+
+# Figure 4a
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyk.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment ier_dijk $main_program $exp_stats_file ier_dijk default default default $default_density
+bash runSingleKnnExperiment ier_gtree $main_program $exp_stats_file ier_gtree_w_mat default default default $default_density
+bash runSingleKnnExperiment ier_phl $main_program $exp_stats_file ier_phl default default default $default_density
+bash runSingleKnnExperiment ier_tnr $main_program $exp_stats_file ier_tnr default default default $default_density
+bash runSingleKnnExperiment ier_ch $main_program $exp_stats_file ier_ch default default default $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Dijk;navy;12,MGtree;black;3,PHL;dark-magenta;8,TNR;dark-orange;2,CH;dark-green;1" default default "right bottom,horizontal maxcols 2,-2" default $default_density_string
+
+# Figure 4b
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyd.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment ier_dijk $main_program $exp_stats_file ier_dijk default default $default_k default
+bash runSingleKnnExperiment ier_gtree $main_program $exp_stats_file ier_gtree_w_mat default default $default_k default
+bash runSingleKnnExperiment ier_phl $main_program $exp_stats_file ier_phl default default $default_k default
+bash runSingleKnnExperiment ier_tnr $main_program $exp_stats_file ier_tnr default default $default_k default
+bash runSingleKnnExperiment ier_ch $main_program $exp_stats_file ier_ch default default $default_k default
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Dijk;navy;12,MGtree;black;3,PHL;dark-magenta;8,TNR;dark-orange;2,CH;dark-green;1" default default "right top,horizontal maxcols 2,-2" $default_k default
+
+# Figure 
+exp_prefix="ier_versions"
+exp_stats_file="${exp_prefix}_varyn.txt"
+> $stats_dir/$exp_stats_file # Truncate file
+bash runSingleKnnExperiment ier_dijk $main_program $exp_stats_file ier_dijk all default $default_k $default_density
+bash runSingleKnnExperiment ier_gtree $main_program $exp_stats_file ier_gtree_w_mat all default $default_k $default_density
+bash runSingleKnnExperiment ier_phl $main_program $exp_stats_file ier_phl all default $default_k $default_density
+bash runSingleKnnExperiment ier_tnr $main_program $exp_stats_file ier_tnr all default $default_k $default_density
+bash runSingleKnnExperiment ier_ch $main_program $exp_stats_file ier_ch all default $default_k $default_density
+bash createSingleKnnExperimentFigures 13 $exp_stats_file $exp_prefix "Dijk;navy;12,MGtree;black;3,PHL;dark-magenta;8,TNR;dark-orange;2,CH;dark-green;1" all default "right top,horizontal maxcols 2,-2" $default_k $default_density_string
+
+
+# Default Experiments
+
+# Figure X, Y, Z
+bash createIndexExperimentsFigures
+
+# Figure 17a, 17b, 17c
+echo -e "\nDefault Experiments: NW, k=10, d=0.001"
+bash runDefaultKnnExperiments 10 0.00100 NW
+
+# Figure X, Y
+echo -e "\nDefault Experiments: USA, k=10, d=0.001"
+bash runDefaultKnnExperiments 10 0.00100 USA network # Don't run network (run in a previous command)
+
+
+# Minimum Object Distance Object Sets
+
+# Figure 
+echo -e "\nRange Distance Experiments: NW, k=10, d=0.001, m=6"
+bash runMinMaxDistObjectsExperiments min_nd 0.001 "1,2,3,4,5,6" 3 NW;
+
+# Figure 
+echo -e "\nRange Distance Experiments: USA, k=10, d=0.001, m=8"
+bash runMinMaxDistObjectsExperiments min_nd 0.001 "1,2,3,4,5,6,7,8" 4 USA;
+
+
+# Clustered Object Sets
+
+# Figure 
+echo -e "\nClustered Experiments: NW, k=10, d=0.001, |C|=5,"
+bash runClusteredObjectsExperiments 0.001 "0.1,0.01,0.001,0.0001" 5 "5,10,25,50,100" NW;
+
+
+# Real-World Object Sets
+
+bash runRealWorldPOIExperiments default NW;
+bash runRealWorldPOIExperiments default USA;
