@@ -1,6 +1,6 @@
 # Road Network kNN Experimental Evaluation
 
-This project consists of implementations of several kNN algorithms for road networks and the experimental framework to compare them. This has primarily been released to allow readers to reproduce results from a paper to appear at VLDB 2016 (details to be updated) and to use in future studies. If you use the code in a publication, and our work is relevant, please consider citing our paper. Please refer to the Requirements below and [FAQ](https://github.com/tenindra/RN-kNN-Exp/wiki/FAQ) if you have any issues. If you still have problems [contact us](http://users.monash.edu.au/~tenindra/). 
+This project consists of implementations of several kNN algorithms for road networks and the experimental framework to compare them. This has primarily been released to allow readers to reproduce results from a paper to appear at VLDB 2016 (details to be updated) and to use in future studies. If you use the code in a publication, and our work is relevant, please consider citing our [paper](http://dl.acm.org/citation.cfm?id=2904125). Please refer to the Requirements below and [FAQ](https://github.com/tenindra/RN-kNN-Exp/wiki/FAQ) if you have any issues. If you still have problems [contact us](http://users.monash.edu.au/~tenindra/). 
 
 
 # Requirements
@@ -202,6 +202,12 @@ Travel times experiments must be reproduced indepedently, as they require differ
     bash createTravelTimeFigures
     ```
 
+# Acknowledgements
+
+Parts of open source projects associated with the following publications were used in our project:
+
+* Takuya Akiba, Yoichi Iwata, Ken-ichi Kawarabayashi, and Yuki Kawata, Fast Shortest-path Distance Queries on Road Networks by Pruned Highway Labeling. In ALENEX 2014. ([Code](https://github.com/kawatea/pruned-highway-labeling))
+* Lingkun Wu, Xiaokui Xiao, Dingxiong Deng, Gao Cong, Andy Diwen Zhu, Shuigeng Zhou: Shortest Path and Distance Queries on Road Networks: An Experimental Evaluation. PVLDB 5(5): 406-417 2012. ([Code](https://sourceforge.net/projects/ntu-sp-exp/))
 
 # Licence
 
