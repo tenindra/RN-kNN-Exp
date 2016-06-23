@@ -75,7 +75,7 @@ The C++ source code can be found in the top-level `RN-kNN-Exp` directory, and in
 
 6. Download the DIMACS distance edge-weight graph files and coordinate files for COL, CAL, E, W, CTR, USA from http://www.dis.uniroma1.it/challenge9/ to the `output_path/data/dimacs` directory
 
-7. Download the node (with extension .cnode) and edge (with extension .cedge) files for North America (NA) from http://www.cs.utah.edu/~lifeifei/SpatialDataset to the `output_path/data/tpq` directory
+7. Download the node (with extension .cnode) and edge (with extension .cedge) files for North America (NA) from http://www.cs.utah.edu/~lifeifei/SpatialDataset.htm to the `output_path/data/tpq` directory
 
     Note: You *must* gzip these files so that `output_path/data/tpq` directory contains NA.cnode.gz and NA.cedge.gz
 
