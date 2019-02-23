@@ -1,4 +1,4 @@
-# Road Network kNN Experimental Evaluation
+# Road Network kNN Experimental Framework
 
 This project consists of implementations of several kNN algorithms for road networks and the experimental framework to compare them. This has primarily been released to allow readers to reproduce results from a paper to appear at VLDB 2016 (details to be updated) and to use in future studies. If you use the code, please cite our [paper](http://dl.acm.org/citation.cfm?id=2904125). Please follow the Requirements below carefully. If you have any issues please check the [FAQ](https://github.com/tenindra/RN-kNN-Exp/wiki/FAQ) and [contact us](http://users.monash.edu.au/~tenindra/). 
 
