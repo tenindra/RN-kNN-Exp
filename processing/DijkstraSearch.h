@@ -18,7 +18,7 @@
  */
 
 #ifndef _DIJKSTRASEARCH_H
-#define _DIJkSTRASEARCH_H
+#define _DIJKSTRASEARCH_H
 
 #include "../common.h"
 #include "DynamicGraph.h"
